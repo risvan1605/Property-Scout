@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+service-account.json
+*service-account*.json
+voice-agent-*.json
+client_secret_*.json
+listings.db
+chroma_db/
+evals/results/
+.pytest_cache/

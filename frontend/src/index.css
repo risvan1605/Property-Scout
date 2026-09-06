@@ -1,0 +1,121 @@
+/* ─── Design tokens ────────────────────────────────────────────────────────
+   A dark map at night: the ground is the colour of an unlit OSM tile, marigold
+   is the only signal colour, and teal is reserved exclusively for facts that
+   carry a source. Nothing else may use teal.                                */
+
+:root {
+  --ground: #0f1419;
+  --ground-deep: #0a0e12;
+  --panel: rgba(24, 31, 38, 0.72);
+  --panel-solid: #181f26;
+  --edge: rgba(232, 237, 242, 0.09);
+  --edge-strong: rgba(232, 237, 242, 0.16);
+
+  --ink: #e8edf2;
+  --ink-mid: #a5b3c0;
+  --ink-dim: #6e7d8a;
+
+  --signal: #f2a93b;        /* marigold — the scout's own voice, live states */
+  --signal-deep: #c8801d;
+  --sourced: #4db6a0;       /* cited facts only */
+  --absent: #e5735b;        /* missing data, failures */
+
+  --metro: #f2a93b;
+  --grocery: #4db6a0;
+  --hospital: #e5735b;
+
+  --display: "Bricolage Grotesque", "Trebuchet MS", sans-serif;
+  --body: "Instrument Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+
+  --rail: 320px;
+  --pad: 20px;
+
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  /* A surveyor's grid, barely there, with a warm glow at the horizon. */
+  background-image:
+    radial-gradient(120% 80% at 50% 0%, rgba(242, 169, 59, 0.07), transparent 62%),
+    linear-gradient(rgba(232, 237, 242, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 237, 242, 0.022) 1px, transparent 1px);
+  background-size: 100% 100%, 44px 44px, 44px 44px;
+  background-attachment: fixed;
+}
+
+h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+
+button { font: inherit; color: inherit; cursor: pointer; }
+
+a { color: var(--sourced); text-underline-offset: 3px; }
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: rgba(232, 237, 242, 0.14); border-radius: 99px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Shared primitives ------------------------------------------------------ */
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.glass {
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+}
+.tag--sourced { color: var(--sourced); }
+.tag--live { color: var(--signal); }
+.tag--absent { color: var(--absent); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

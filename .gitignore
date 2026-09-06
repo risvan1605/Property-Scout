@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+chroma_db/
+
+# Credentials
+service-account.json
+*service-account*.json
+*-*.iam.gserviceaccount.com.json
+voice-agent-*.json
+client_secret_*.json
+credentials/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+evals/results/
+
+# Generated
+*.pdf
+
+# Playwright MCP artifacts
+.playwright-mcp/

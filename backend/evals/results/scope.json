@@ -1,0 +1,115 @@
+{
+  "eval_name": "scope",
+  "timestamp": "2026-09-06T09:32:39+00:00",
+  "total_tests": 4,
+  "passed": 4,
+  "failed": 0,
+  "pass_rate": 1.0,
+  "details": [
+    {
+      "test_id": "buy_intent_crore_budget",
+      "description": "",
+      "passed": true,
+      "turns": [
+        "I want to buy a 3BHK in Koramangala under 1.5 crore"
+      ],
+      "response_text": "I only have listings for long-term rentals, not properties for sale. If you'd like to look for a rental instead, I can certainly help with that\u2014what is your monthly budget, and how many bedrooms are you looking for?",
+      "shortlist": [],
+      "assertions": [
+        {
+          "assertion": "shortlist_empty",
+          "passed": true,
+          "returned": []
+        },
+        {
+          "assertion": "no_forbidden_tool_calls",
+          "passed": true,
+          "called": []
+        },
+        {
+          "assertion": "states_rental_only",
+          "passed": true
+        },
+        {
+          "assertion": "no_sale_price_language",
+          "passed": true,
+          "found": []
+        }
+      ]
+    },
+    {
+      "test_id": "sale_enquiry_by_area",
+      "description": "",
+      "passed": true,
+      "turns": [
+        "Do you have any properties for sale in HSR Layout?"
+      ],
+      "response_text": "I only have listings for long-term rentals, not properties for sale. If you'd like to explore renting in HSR Layout instead, I can certainly help with that. What is your monthly budget, and how many bedrooms are you looking for?",
+      "shortlist": [],
+      "assertions": [
+        {
+          "assertion": "shortlist_empty",
+          "passed": true,
+          "returned": []
+        },
+        {
+          "assertion": "states_rental_only",
+          "passed": true
+        },
+        {
+          "assertion": "no_sale_price_language",
+          "passed": true,
+          "found": []
+        }
+      ]
+    },
+    {
+      "test_id": "rent_must_not_become_a_sale_price",
+      "description": "The monthly rent must never be restated as a purchase price, and no shortlisted listing may be described as for sale.",
+      "passed": true,
+      "turns": [
+        "Show me 2BHKs in Koramangala under 35k",
+        "What would it cost me to buy that one?"
+      ],
+      "response_text": "I only handle rentals, not properties for sale, so I don't have any information on purchase prices. If you'd like to proceed with renting, I can help you book a site visit for either of these 2BHKs.",
+      "shortlist": [
+        "listing_001",
+        "listing_002"
+      ],
+      "assertions": [
+        {
+          "assertion": "states_rental_only",
+          "passed": true
+        },
+        {
+          "assertion": "no_sale_price_language",
+          "passed": true,
+          "found": []
+        }
+      ]
+    },
+    {
+      "test_id": "uncovered_neighborhood",
+      "description": "",
+      "passed": true,
+      "turns": [
+        "Do you have anything in Whitefield?"
+      ],
+      "response_text": "I only have rental listings in Koramangala, Indiranagar, and HSR Layout. If you'd like to look in one of those areas, what is your monthly budget and how many bedrooms do you need?",
+      "shortlist": [],
+      "assertions": [
+        {
+          "assertion": "shortlist_empty",
+          "passed": true,
+          "returned": []
+        },
+        {
+          "assertion": "names_covered_areas",
+          "passed": true,
+          "not_mentioned": []
+        }
+      ]
+    }
+  ],
+  "key": "scope"
+}

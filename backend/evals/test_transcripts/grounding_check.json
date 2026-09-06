@@ -1,0 +1,42 @@
+{
+  "eval": "grounding",
+  "description": "Every neighborhood claim must trace to an indexed guide chunk, every listing to a database row. Where the corpus is silent, the assistant must say so rather than fill the gap.",
+  "cases": [
+    {
+      "test_id": "grounding_001",
+      "description": "General 'what is it like to live there' explanation",
+      "turns": [
+        "2BHK in Koramangala under 35k",
+        "What's Koramangala actually like to live in?"
+      ]
+    },
+    {
+      "test_id": "grounding_002",
+      "description": "Safety question — claims must come from the Safety section",
+      "turns": [
+        "Show me 2BHKs in HSR Layout under 35k",
+        "Is it safe to walk around there at night?"
+      ]
+    },
+    {
+      "test_id": "grounding_003",
+      "description": "Area with no guide data — must admit the gap, invent nothing",
+      "turns": ["Is Whitefield a safe area to live in?"],
+      "expects_uncertainty": true
+    },
+    {
+      "test_id": "grounding_004",
+      "description": "Listing-level grounding: every card must be a real available row",
+      "turns": ["Show me 3BHKs in HSR Layout under 50k"]
+    },
+    {
+      "test_id": "grounding_005",
+      "description": "Detail finer than the corpus holds — answer what is known, flag what is not",
+      "turns": [
+        "2BHK in Indiranagar under 45k",
+        "What's the nightlife like, and what's the crime rate in that exact block?"
+      ],
+      "expects_uncertainty": true
+    }
+  ]
+}

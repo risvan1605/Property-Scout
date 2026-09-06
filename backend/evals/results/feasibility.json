@@ -1,0 +1,164 @@
+{
+  "eval_name": "feasibility",
+  "timestamp": "2026-09-06T09:27:12+00:00",
+  "total_tests": 5,
+  "passed": 5,
+  "failed": 0,
+  "pass_rate": 1.0,
+  "details": [
+    {
+      "test_id": "feasibility_001",
+      "description": "2BHK under 35k in Koramangala with parking",
+      "passed": true,
+      "shortlist": [
+        "listing_001",
+        "listing_002"
+      ],
+      "response_text": "I found two 2BHKs in Koramangala under thirty-five thousand with parking. The most affordable is at Prestige Oasis for twenty-eight thousand, and there's also a fully-furnished option at Sobha Dream Acres for thirty-five thousand. Would you like to know more about either of these?",
+      "assertions": [
+        {
+          "assertion": "all_within_budget<=35000",
+          "passed": true,
+          "over_budget": []
+        },
+        {
+          "assertion": "all_min_bedrooms>=2",
+          "passed": true,
+          "too_few_bedrooms": []
+        },
+        {
+          "assertion": "all_in_Koramangala",
+          "passed": true,
+          "wrong_neighborhood": []
+        },
+        {
+          "assertion": "all_have_parking",
+          "passed": true,
+          "missing_amenity": []
+        },
+        {
+          "assertion": "all_available",
+          "passed": true,
+          "unavailable": []
+        },
+        {
+          "assertion": "min_results>=1",
+          "passed": true,
+          "returned": 2
+        }
+      ]
+    },
+    {
+      "test_id": "feasibility_002",
+      "description": "Strict budget with two must-have amenities, no neighborhood stated",
+      "passed": true,
+      "shortlist": [
+        "listing_011",
+        "listing_002"
+      ],
+      "response_text": "I found two 2BHKs with a gym and swimming pool under thirty-five thousand rupees. There's a fully furnished place in HSR Layout for thirty-two thousand, and another fully furnished one in Koramangala for thirty-five thousand. Would you like to know more about either of these?",
+      "assertions": [
+        {
+          "assertion": "all_within_budget<=35000",
+          "passed": true,
+          "over_budget": []
+        },
+        {
+          "assertion": "all_min_bedrooms>=2",
+          "passed": true,
+          "too_few_bedrooms": []
+        },
+        {
+          "assertion": "all_have_gym+swimming-pool",
+          "passed": true,
+          "missing_amenity": []
+        },
+        {
+          "assertion": "all_available",
+          "passed": true,
+          "unavailable": []
+        },
+        {
+          "assertion": "min_results>=1",
+          "passed": true,
+          "returned": 2
+        }
+      ]
+    },
+    {
+      "test_id": "feasibility_003",
+      "description": "Cross-neighborhood search with no area filter",
+      "passed": true,
+      "shortlist": [
+        "listing_014",
+        "listing_005",
+        "listing_010",
+        "listing_003"
+      ],
+      "response_text": "I found four 1BHKs under twenty-two thousand rupees. There's one in HSR Layout for fifteen thousand, two in Koramangala starting at eighteen thousand, and one in Indiranagar for twenty thousand. Would you like to know more about any of these?",
+      "assertions": [
+        {
+          "assertion": "all_within_budget<=22000",
+          "passed": true,
+          "over_budget": []
+        },
+        {
+          "assertion": "all_min_bedrooms>=1",
+          "passed": true,
+          "too_few_bedrooms": []
+        },
+        {
+          "assertion": "all_available",
+          "passed": true,
+          "unavailable": []
+        },
+        {
+          "assertion": "min_results>=3",
+          "passed": true,
+          "returned": 4
+        }
+      ]
+    },
+    {
+      "test_id": "feasibility_004",
+      "description": "Impossible combination must return nothing, not a near-miss",
+      "passed": true,
+      "shortlist": [],
+      "response_text": "I couldn't find any fully furnished 3BHKs in Indiranagar for under twenty thousand rupees. That's a very tight budget for a 3BHK in that area. Would you be open to increasing your budget, or perhaps looking at a different neighborhood?",
+      "assertions": [
+        {
+          "assertion": "empty_shortlist",
+          "passed": true,
+          "unexpected": []
+        }
+      ]
+    },
+    {
+      "test_id": "feasibility_005",
+      "description": "Budget boundary is inclusive \u2014 a listing at exactly the limit must survive",
+      "passed": true,
+      "shortlist": [
+        "listing_001"
+      ],
+      "response_text": "I found one 2BHK in Koramangala for twenty-eight thousand rupees. It's at Prestige Oasis and comes semi-furnished with parking, a gym, and power backup. Would you like to know more about this one, or should we keep looking?",
+      "assertions": [
+        {
+          "assertion": "all_within_budget<=28000",
+          "passed": true,
+          "over_budget": []
+        },
+        {
+          "assertion": "contains_listings",
+          "passed": true,
+          "missing": []
+        },
+        {
+          "assertion": "all_available",
+          "passed": true,
+          "unavailable": []
+        }
+      ]
+    }
+  ],
+  "key": "feasibility"
+}

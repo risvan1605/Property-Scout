@@ -1,0 +1,76 @@
+.dial {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dial__svg {
+  width: 118px;
+  height: 118px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.dial__ring {
+  fill: none;
+  stroke: rgba(232, 237, 242, 0.22);
+  stroke-width: 0.75;
+}
+
+.dial__axis {
+  stroke: var(--edge);
+  stroke-width: 0.75;
+  stroke-dasharray: 2 4;
+}
+
+.dial__north {
+  fill: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 8px;
+  text-anchor: middle;
+  letter-spacing: 0.1em;
+}
+
+.dial__home {
+  fill: var(--ink);
+  stroke: var(--ground);
+  stroke-width: 1.5;
+}
+
+.dial__poi circle:last-of-type { transition: r 140ms ease; }
+.dial__poi:hover circle:last-of-type { r: 5; }
+
+.dial__legend {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--ink-mid);
+}
+
+.dial__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.dial__legend-item b {
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.dial__swatch {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dial__scale {
+  margin-top: 3px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+}

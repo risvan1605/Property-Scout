@@ -1,0 +1,262 @@
+{
+  "eval_name": "edit_correctness",
+  "timestamp": "2026-09-06T09:28:56+00:00",
+  "total_tests": 5,
+  "passed": 5,
+  "failed": 0,
+  "pass_rate": 1.0,
+  "details": [
+    {
+      "test_id": "edit_001",
+      "description": "Budget ceiling cut from 40k to 30k",
+      "edit_command": "Drop anything above 30k",
+      "passed": true,
+      "before": [
+        "listing_001",
+        "listing_002"
+      ],
+      "after": [
+        "listing_001"
+      ],
+      "diff": {
+        "removed": [
+          "listing_002"
+        ],
+        "added": [],
+        "kept": [
+          "listing_001"
+        ],
+        "mutated": []
+      },
+      "response_text": "That leaves just one option: the semi-furnished 2BHK at Prestige Oasis for twenty-eight thousand rupees. Would you like to see what's nearby, or shall we book a visit?",
+      "assertions": [
+        {
+          "assertion": "all_within_budget<=30000",
+          "passed": true,
+          "over_budget": []
+        },
+        {
+          "assertion": "no_unintended_removals",
+          "passed": true,
+          "wrongly_removed": []
+        },
+        {
+          "assertion": "no_new_additions",
+          "passed": true,
+          "added": []
+        },
+        {
+          "assertion": "survivors_unchanged",
+          "passed": true,
+          "mutated": []
+        }
+      ]
+    },
+    {
+      "test_id": "edit_002",
+      "description": "Amenity filter applied to an existing shortlist",
+      "edit_command": "Only show the pet-friendly ones",
+      "passed": true,
+      "before": [
+        "listing_013",
+        "listing_001",
+        "listing_008",
+        "listing_011",
+        "listing_002",
+        "listing_015",
+        "listing_006"
+      ],
+      "after": [
+        "listing_011",
+        "listing_006"
+      ],
+      "diff": {
+        "removed": [
+          "listing_001",
+          "listing_002",
+          "listing_008",
+          "listing_013",
+          "listing_015"
+        ],
+        "added": [],
+        "kept": [
+          "listing_006",
+          "listing_011"
+        ],
+        "mutated": []
+      },
+      "response_text": "I found two pet-friendly 2BHKs under forty thousand rupees. There is Purva Venezia in HSR Layout for thirty-two thousand, and Adarsh Palm Retreat in Indiranagar for forty thousand. Would you like to know more about either of these?",
+      "assertions": [
+        {
+          "assertion": "all_have_pet-friendly",
+          "passed": true,
+          "missing": []
+        },
+        {
+          "assertion": "no_unintended_removals",
+          "passed": true,
+          "wrongly_removed": []
+        },
+        {
+          "assertion": "no_new_additions",
+          "passed": true,
+          "added": []
+        },
+        {
+          "assertion": "survivors_unchanged",
+          "passed": true,
+          "mutated": []
+        }
+      ]
+    },
+    {
+      "test_id": "edit_003",
+      "description": "Widening the shortlist must add, not replace",
+      "edit_command": "Add another option with a balcony, anywhere",
+      "passed": true,
+      "before": [
+        "listing_001",
+        "listing_002"
+      ],
+      "after": [
+        "listing_001",
+        "listing_002",
+        "listing_013",
+        "listing_008",
+        "listing_015"
+      ],
+      "diff": {
+        "removed": [],
+        "added": [
+          "listing_008",
+          "listing_013",
+          "listing_015"
+        ],
+        "kept": [
+          "listing_001",
+          "listing_002"
+        ],
+        "mutated": []
+      },
+      "response_text": "I've added three more options with balconies to your list. You now have a 2BHK in HSR Layout for twenty-six thousand, a 2BHK in Indiranagar for thirty thousand, and a 3BHK in HSR Layout for thirty-eight thousand. Would you like to see details for any of these?",
+      "assertions": [
+        {
+          "assertion": "previous_listings_preserved",
+          "passed": true,
+          "wrongly_removed": []
+        },
+        {
+          "assertion": "has_new_additions>=1",
+          "passed": true,
+          "added": [
+            "listing_008",
+            "listing_013",
+            "listing_015"
+          ]
+        },
+        {
+          "assertion": "new_listings_have_balcony",
+          "passed": true,
+          "added": [
+            "listing_008",
+            "listing_013",
+            "listing_015"
+          ],
+          "without_amenity": []
+        }
+      ]
+    },
+    {
+      "test_id": "edit_004",
+      "description": "Two edits in sequence, each applied on top of the last",
+      "edit_command": "Now only the fully furnished ones",
+      "passed": true,
+      "before": [
+        "listing_013",
+        "listing_001",
+        "listing_008",
+        "listing_011",
+        "listing_002"
+      ],
+      "after": [
+        "listing_011",
+        "listing_002"
+      ],
+      "diff": {
+        "removed": [
+          "listing_001",
+          "listing_008",
+          "listing_013"
+        ],
+        "added": [],
+        "kept": [
+          "listing_002",
+          "listing_011"
+        ],
+        "mutated": []
+      },
+      "response_text": "I've narrowed it down to two fully-furnished 2BHKs under thirty-five thousand rupees. You have Purva Venezia in HSR Layout for thirty-two thousand, and Sobha Dream Acres in Koramangala for thirty-five thousand. Would you like to know what's nearby either of these?",
+      "assertions": [
+        {
+          "assertion": "all_within_budget<=35000",
+          "passed": true,
+          "over_budget": []
+        },
+        {
+          "assertion": "all_fully-furnished",
+          "passed": true,
+          "wrong_furnishing": []
+        },
+        {
+          "assertion": "no_new_additions",
+          "passed": true,
+          "added": []
+        },
+        {
+          "assertion": "survivors_unchanged",
+          "passed": true,
+          "mutated": []
+        }
+      ]
+    },
+    {
+      "test_id": "edit_005",
+      "description": "Redundant edit is a no-op, not a re-search that changes the set",
+      "edit_command": "Make sure they all have a balcony",
+      "passed": true,
+      "before": [
+        "listing_013"
+      ],
+      "after": [
+        "listing_013"
+      ],
+      "diff": {
+        "removed": [],
+        "added": [],
+        "kept": [
+          "listing_013"
+        ],
+        "mutated": []
+      },
+      "response_text": "I've checked again, and SNN Raj Etternia is currently the only 2BHK in HSR Layout under thirty-five thousand rupees that includes a balcony. Would you like to see options in other neighborhoods, or perhaps adjust your budget to see if more become available?",
+      "assertions": [
+        {
+          "assertion": "shortlist_identical",
+          "passed": true,
+          "removed": [],
+          "added": [],
+          "kept": [
+            "listing_013"
+          ],
+          "mutated": []
+        },
+        {
+          "assertion": "all_have_balcony",
+          "passed": true,
+          "missing": []
+        }
+      ]
+    }
+  ],
+  "key": "edit"
+}

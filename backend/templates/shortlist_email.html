@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Your Property Shortlist — Bengaluru</title>
+<style>
+  @page { size: A4; margin: 18mm 15mm; @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font: 9pt "Helvetica Neue", Helvetica, Arial, sans-serif; color: #8a8f98; } }
+
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+         color: #1c1e21; font-size: 10.5pt; line-height: 1.5; }
+
+  .masthead { border-bottom: 2.5pt solid #1a5f4a; padding-bottom: 10pt; margin-bottom: 18pt; }
+  .masthead h1 { font-size: 20pt; margin: 0 0 4pt; letter-spacing: -0.3pt; }
+  .masthead .meta { color: #6b7280; font-size: 9.5pt; }
+
+  .card { border: 0.75pt solid #dcdfe4; border-radius: 5pt; padding: 12pt 14pt;
+          margin-bottom: 13pt; break-inside: avoid; }
+  .card-head { display: flex; justify-content: space-between; align-items: baseline;
+               border-bottom: 0.5pt solid #eceef1; padding-bottom: 7pt; margin-bottom: 8pt; }
+  .society { font-size: 13pt; font-weight: 600; margin: 0; }
+  .area { color: #6b7280; font-size: 9.5pt; }
+  .rent { font-size: 14pt; font-weight: 700; color: #1a5f4a; white-space: nowrap; }
+  .rent span { font-size: 8.5pt; font-weight: 400; color: #6b7280; }
+
+  .specs { margin: 0 0 8pt; color: #374151; font-size: 10pt; }
+  .specs strong { color: #1c1e21; }
+
+  .label { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.6pt;
+           color: #8a8f98; margin: 9pt 0 4pt; }
+  .chip { display: inline-block; background: #f2f4f6; border-radius: 3pt;
+          padding: 2pt 7pt; margin: 0 4pt 4pt 0; font-size: 9pt; color: #374151; }
+  .chip-match { background: #e8f3ee; color: #1a5f4a; }
+
+  .poi { font-size: 9.5pt; color: #374151; margin: 2pt 0; }
+  .poi em { color: #8a8f98; font-style: normal; }
+  .note { font-size: 9pt; color: #8a8f98; font-style: italic; }
+
+  .snapshot { break-inside: avoid; border-left: 2.5pt solid #1a5f4a;
+              padding: 2pt 0 2pt 11pt; margin: 16pt 0 13pt; }
+  .snapshot h3 { font-size: 11.5pt; margin: 0 0 5pt; }
+  .snapshot p { margin: 0 0 6pt; font-size: 9.5pt; color: #374151; white-space: pre-line; }
+  .snapshot .heading { font-weight: 600; color: #1c1e21; }
+
+  .sources { margin-top: 18pt; border-top: 0.75pt solid #dcdfe4; padding-top: 10pt; }
+  .sources h2 { font-size: 11pt; margin: 0 0 6pt; }
+  .sources li { font-size: 8.5pt; color: #6b7280; margin-bottom: 3pt; }
+  .sources a { color: #1a5f4a; text-decoration: none; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <h1>Your Property Shortlist</h1>
+  <div class="meta">
+    {{ listings|length }} listing{{ '' if listings|length == 1 else 's' }}
+    {%- if neighborhoods %} in {{ neighborhoods|join(', ') }}{% endif %}
+    &middot; Bengaluru &middot; {{ generated_on }}
+  </div>
+</div>
+
+{% for listing in listings %}
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="society">{{ listing.society_name }}</p>
+      <span class="area">{{ listing.neighborhood }}</span>
+    </div>
+    <div class="rent">&#8377;{{ listing.rent|rupees }} <span>/ month</span></div>
+  </div>
+
+  <p class="specs">
+    <strong>{{ listing.bedrooms }} BHK</strong>
+    {%- if listing.sqft %} &middot; {{ listing.sqft }} sqft{% endif %}
+    {%- if listing.furnishing %} &middot; {{ listing.furnishing|replace('-', ' ') }}{% endif %}
+  </p>
+
+  {% if listing.match_reasons %}
+    <div class="label">Why it matched</div>
+    {% for reason in listing.match_reasons %}<span class="chip chip-match">{{ reason }}</span>{% endfor %}
+  {% endif %}
+
+  {% if listing.amenities %}
+    <div class="label">Amenities</div>
+    {% for amenity in listing.amenities %}<span class="chip">{{ amenity|replace('-', ' ') }}</span>{% endfor %}
+  {% endif %}
+
+  {% set pois = listing.nearby_pois %}
+  {% if pois %}
+    <div class="label">Nearby (OpenStreetMap)</div>
+    {% for key, caption in [('metro_stations', 'Metro'), ('groceries', 'Groceries'), ('hospitals', 'Hospitals')] %}
+      {% if pois.get(key) %}
+        <p class="poi"><em>{{ caption }}:</em>
+          {% for poi in pois[key][:3] %}{{ poi.name }} ({{ poi.distance_km }} km){{ ', ' if not loop.last }}{% endfor %}
+        </p>
+      {% elif key not in (pois.unavailable or []) %}
+        <p class="poi"><em>{{ caption }}:</em> none found within
+          {{ (pois.radius_meters or 1500) / 1000 }} km</p>
+      {% endif %}
+    {% endfor %}
+    {% if pois.unavailable %}
+      <p class="note">Some nearby-amenity data was unavailable when this was generated.</p>
+    {% endif %}
+  {% else %}
+    <p class="note">Nearby-amenity data was not available for this listing.</p>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% for name, snapshot in snapshots.items() %}
+  {% if snapshot.summary or snapshot.safety or snapshot.transit %}
+  <div class="snapshot">
+    <h3>{{ name }} — neighborhood snapshot</h3>
+    {% if snapshot.summary %}<p>{{ snapshot.summary }}</p>{% endif %}
+    {% if snapshot.safety %}<p><span class="heading">Safety.</span> {{ snapshot.safety }}</p>{% endif %}
+    {% if snapshot.transit %}<p><span class="heading">Transit.</span> {{ snapshot.transit }}</p>{% endif %}
+  </div>
+  {% endif %}
+{% endfor %}
+
+{% if sources %}
+<div class="sources">
+  <h2>Sources</h2>
+  <ul>
+    {% for source in sources %}
+    <li>{{ source.neighborhood }} — {{ source.section }}:
+      <a href="{{ source.url }}">{{ source.url }}</a></li>
+    {% endfor %}
+    <li>Nearby places &copy; OpenStreetMap contributors (ODbL 1.0), retrieved via MCP</li>
+  </ul>
+</div>
+{% endif %}
+
+</body>
+</html>

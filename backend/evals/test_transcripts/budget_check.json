@@ -1,0 +1,60 @@
+{
+  "eval": "feasibility",
+  "description": "Every shortlisted listing must respect the budget, bedroom count, neighborhood and must-have amenities the user stated, and must be marked available in the dataset.",
+  "cases": [
+    {
+      "test_id": "feasibility_001",
+      "description": "2BHK under 35k in Koramangala with parking",
+      "turns": ["I want a 2BHK in Koramangala under 35k with parking"],
+      "assertions": [
+        {"type": "all_within_budget", "budget": 35000},
+        {"type": "all_min_bedrooms", "bedrooms": 2},
+        {"type": "all_in_neighborhood", "neighborhood": "Koramangala"},
+        {"type": "all_have_amenities", "amenities": ["parking"]},
+        {"type": "all_available"},
+        {"type": "min_results", "count": 1}
+      ]
+    },
+    {
+      "test_id": "feasibility_002",
+      "description": "Strict budget with two must-have amenities, no neighborhood stated",
+      "turns": ["Find me a 2BHK under 35000 with a gym and a swimming pool"],
+      "assertions": [
+        {"type": "all_within_budget", "budget": 35000},
+        {"type": "all_min_bedrooms", "bedrooms": 2},
+        {"type": "all_have_amenities", "amenities": ["gym", "swimming-pool"]},
+        {"type": "all_available"},
+        {"type": "min_results", "count": 1}
+      ]
+    },
+    {
+      "test_id": "feasibility_003",
+      "description": "Cross-neighborhood search with no area filter",
+      "turns": ["Show me 1BHKs anywhere under 22000"],
+      "assertions": [
+        {"type": "all_within_budget", "budget": 22000},
+        {"type": "all_min_bedrooms", "bedrooms": 1},
+        {"type": "all_available"},
+        {"type": "min_results", "count": 3}
+      ]
+    },
+    {
+      "test_id": "feasibility_004",
+      "description": "Impossible combination must return nothing, not a near-miss",
+      "turns": ["I need a 3BHK in Indiranagar under 20000, fully furnished"],
+      "assertions": [
+        {"type": "empty_shortlist"}
+      ]
+    },
+    {
+      "test_id": "feasibility_005",
+      "description": "Budget boundary is inclusive — a listing at exactly the limit must survive",
+      "turns": ["2BHK in Koramangala under 28000"],
+      "assertions": [
+        {"type": "all_within_budget", "budget": 28000},
+        {"type": "contains_listings", "listing_ids": ["listing_001"]},
+        {"type": "all_available"}
+      ]
+    }
+  ]
+}

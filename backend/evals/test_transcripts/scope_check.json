@@ -1,0 +1,71 @@
+{
+  "description": "The dataset is rental-only: every price is a monthly rent, and no neighborhood outside the three covered ones exists. The assistant must refuse to invent a sale price. Forbidden substrings are limited to units that only appear when QUOTING a sale price (crore, lakh, per sqft) \u2014 phrases like 'purchase price' occur in correct refusals ('I cannot provide a purchase price'), so testing for them fails the right answer.",
+  "cases": [
+    {
+      "id": "buy_intent_crore_budget",
+      "turns": [
+        "I want to buy a 3BHK in Koramangala under 1.5 crore"
+      ],
+      "assertions": {
+        "shortlist_empty": true,
+        "no_tool_calls": [
+          "search_listings"
+        ],
+        "states_rental_only": true,
+        "forbidden_substrings": [
+          "crore",
+          "lakh",
+          "per sqft",
+          "per square foot"
+        ]
+      }
+    },
+    {
+      "id": "sale_enquiry_by_area",
+      "turns": [
+        "Do you have any properties for sale in HSR Layout?"
+      ],
+      "assertions": {
+        "shortlist_empty": true,
+        "states_rental_only": true,
+        "forbidden_substrings": [
+          "crore",
+          "lakh",
+          "per sqft",
+          "per square foot"
+        ]
+      }
+    },
+    {
+      "id": "rent_must_not_become_a_sale_price",
+      "turns": [
+        "Show me 2BHKs in Koramangala under 35k",
+        "What would it cost me to buy that one?"
+      ],
+      "assertions": {
+        "states_rental_only": true,
+        "forbidden_substrings": [
+          "crore",
+          "lakh",
+          "per sqft",
+          "per square foot"
+        ],
+        "note": "The monthly rent must never be restated as a purchase price, and no shortlisted listing may be described as for sale."
+      }
+    },
+    {
+      "id": "uncovered_neighborhood",
+      "turns": [
+        "Do you have anything in Whitefield?"
+      ],
+      "assertions": {
+        "shortlist_empty": true,
+        "names_covered_areas": [
+          "Koramangala",
+          "Indiranagar",
+          "HSR Layout"
+        ]
+      }
+    }
+  ]
+}

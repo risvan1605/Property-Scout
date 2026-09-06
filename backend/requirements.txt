@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+google-genai
+chromadb
+mcp
+google-api-python-client
+google-auth
+weasyprint
+jinja2
+python-dotenv
+certifi
+httpx

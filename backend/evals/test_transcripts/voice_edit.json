@@ -1,0 +1,63 @@
+{
+  "eval": "edit_correctness",
+  "description": "A spoken refinement must change exactly what was asked and nothing else: no survivor mutated, no listing silently added or dropped.",
+  "cases": [
+    {
+      "test_id": "edit_001",
+      "description": "Budget ceiling cut from 40k to 30k",
+      "setup_turns": ["I want a 2BHK in Koramangala under 40k"],
+      "edit_turn": "Drop anything above 30k",
+      "assertions": [
+        {"type": "all_within_budget", "budget": 30000},
+        {"type": "no_unintended_removals", "keep_if": {"max_rent": 30000}},
+        {"type": "no_new_additions"},
+        {"type": "survivors_unchanged"}
+      ]
+    },
+    {
+      "test_id": "edit_002",
+      "description": "Amenity filter applied to an existing shortlist",
+      "setup_turns": ["Show me 2BHKs under 40000"],
+      "edit_turn": "Only show the pet-friendly ones",
+      "assertions": [
+        {"type": "all_have_amenities", "amenities": ["pet-friendly"]},
+        {"type": "no_unintended_removals", "keep_if": {"has_amenities": ["pet-friendly"]}},
+        {"type": "no_new_additions"},
+        {"type": "survivors_unchanged"}
+      ]
+    },
+    {
+      "test_id": "edit_003",
+      "description": "Widening the shortlist must add, not replace",
+      "setup_turns": ["2BHK in Koramangala under 40k"],
+      "edit_turn": "Add another option with a balcony, anywhere",
+      "assertions": [
+        {"type": "previous_listings_preserved"},
+        {"type": "has_new_additions", "min": 1},
+        {"type": "new_listings_have_amenity", "amenity": "balcony"}
+      ]
+    },
+    {
+      "test_id": "edit_004",
+      "description": "Two edits in sequence, each applied on top of the last",
+      "setup_turns": ["Show me 2BHKs under 45000", "Drop anything above 35k"],
+      "edit_turn": "Now only the fully furnished ones",
+      "assertions": [
+        {"type": "all_within_budget", "budget": 35000},
+        {"type": "all_furnishing", "furnishing": "fully-furnished"},
+        {"type": "no_new_additions"},
+        {"type": "survivors_unchanged"}
+      ]
+    },
+    {
+      "test_id": "edit_005",
+      "description": "Redundant edit is a no-op, not a re-search that changes the set",
+      "setup_turns": ["2BHK in HSR Layout under 35k with a balcony"],
+      "edit_turn": "Make sure they all have a balcony",
+      "assertions": [
+        {"type": "shortlist_identical"},
+        {"type": "all_have_amenities", "amenities": ["balcony"]}
+      ]
+    }
+  ]
+}

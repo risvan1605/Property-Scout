@@ -66,24 +66,32 @@ git status --short | grep -E "\.env$|service-account|voice-agent-.*\.json" && \
 3. Railway reads `railway.json` at the root: Docker builder, health check on
    `/api/health` with a 300s timeout (generous, because the first boot seeds the
    vector store).
-4. **Variables** — add these (values from `backend/.env`):
+4. **Variables** — only the secrets. Everything else already has the right
+   default in `config.py`, and a second copy is just a second place to get it
+   wrong.
 
 | Variable | Value | Notes |
 |---|---|---|
-| `GEMINI_API_KEY` | *(from .env)* | Required. Everything else degrades gracefully |
-| `GEMINI_MODEL` | `gemini-3.1-flash-lite` | 15 req/min, 500/day on the free tier |
-| `LLM_THINKING_LEVEL` | `low` | Without this each reply costs ~20s |
-| `ELEVENLABS_API_KEY` | *(from .env)* | Omit → browser voice |
-| `ELEVENLABS_VOICE_ID` | `EXAVITQu4vr4xnSDxMaL` | Sarah; free tier can't use Voice Library voices |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | *paste the whole file* | `cat backend/service-account.json \| pbcopy` |
-| `GOOGLE_CALENDAR_ID` | *(from .env)* | |
-| `SMTP_HOST` | `smtp.gmail.com` | |
-| `SMTP_PORT` | `587` | |
-| `SMTP_USER` | *(from .env)* | |
+| `GEMINI_API_KEY` | *(from .env)* | **Required.** Everything else degrades gracefully |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | *the file's whole contents* | `cat backend/service-account.json \| pbcopy`. Not the filename — the JSON itself |
+| `GOOGLE_CALENDAR_ID` | *(from .env)* | Booking; omit → booking reports unavailable |
+| `SMTP_USER` | *(from .env)* | Emailing the shortlist PDF |
 | `SMTP_PASS` | *(from .env)* | Gmail **app password**, 16 chars |
+| `ELEVENLABS_API_KEY` | *(from .env)* | Optional; omit → the browser's own voice |
 
-Do **not** set `PORT`; Railway injects it and `entrypoint.sh` reads it.
-`FRONTEND_URL` is **not needed** — it only matters for a split deployment.
+**Do not set anything else.** `GEMINI_MODEL`, `LLM_THINKING_LEVEL`,
+`LLM_TEMPERATURE`, `SMTP_HOST`, `SMTP_PORT`, `ELEVENLABS_VOICE_ID`,
+`ELEVENLABS_MODEL`, `GOOGLE_SERVICE_ACCOUNT_FILE`, `RAG_MIN_SIMILARITY`, the
+`ENRICH_*`, `PREFETCH_*` and `MCP_*` knobs and `OSM_OVERPASS_ENDPOINTS` all
+default to exactly the values a deployment wants. Set one only to *change* it —
+the table in `backend/.env.example` documents what each does.
+
+Three that would be actively wrong here:
+
+- `PORT` — Railway injects it and `entrypoint.sh` reads it; setting it breaks routing.
+- `FRONTEND_URL` — only meaningful for a split deployment (§7). One container
+  serving both halves has no cross-origin request to allow.
+- `BACKEND_URL` — dead: defined in `config.py` and referenced nowhere.
 
 5. **Deploy.** Watch the build log for three things: the Node stage running
    `npm ci` and `vite build`, the apt step installing `libpango`/`libcairo`
@@ -167,7 +175,7 @@ input. HTTPS is required for microphone access — Railway gives you that.
 | UI loads, every call 404s | Bundle built with a stale base URL | `VITE_API_URL` must be **unset** for this deployment; check `frontend/.env.development` isn't being read at build |
 | `health` shows `chroma:false` | Seeding failed | Check `GEMINI_API_KEY`; see deploy logs for the seed step |
 | `health` shows `voice:false` | No ElevenLabs key | Add `ELEVENLABS_API_KEY` |
-| Replies take ~20s | `LLM_THINKING_LEVEL` unset | Set it to `low` |
+| Replies take ~20s | `LLM_THINKING_LEVEL` overridden to something above `low` | Remove the override — `low` is the default in `config.py` and is what you want |
 | "I've used up my AI quota" | Free tier: 15/min, 500/day | Wait, or switch `GEMINI_MODEL` (each model has its own quota) |
 | TTS silent, logs show 402 | Voice Library voice on a free plan | Use a premade voice id (Sarah is the default) |
 | "Booking is temporarily unavailable" | Key or calendar sharing | Check `GOOGLE_SERVICE_ACCOUNT_JSON` parses; share the calendar with the service-account email |

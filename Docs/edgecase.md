@@ -86,6 +86,9 @@ A comprehensive catalog of edge cases organized by system component. Each entry 
 | 6.4 | **Listing has invalid coordinates** (lat/lng is 0,0 or null) | Skip MCP call for that listing. Note: "Location data unavailable — cannot check nearby amenities." |
 | 6.5 | **MCP returns duplicate POIs** | Deduplicate by name + coordinates before displaying. |
 | 6.6 | **MCP rate limiting** (too many calls in quick succession) | Implement request queuing with 500ms delay between calls. Cache aggressively. |
+| 6.7 | **A background prefetch fails and disables the user-facing lookup** | A shared circuit breaker must not be tripped by work nobody is waiting on. The warm-up's timeout says nothing about whether one foreground lookup would have succeeded, and a tripped breaker makes "what's nearby?" return "unavailable" without a request ever leaving the host. Background batches pass `trip_circuit=False`; only foreground failures open the breaker. |
+| 6.8 | **A regional Overpass mirror answers 200 with zero elements** | Worse than an error: outside its region a mirror like `overpass.osm.ch` returns a valid empty result, which surfaces as "nothing nearby" rather than as a failed lookup — the exact hallucination the grounding rules forbid. Only worldwide endpoints may be configured; see the note on `DEFAULT_OVERPASS_ENDPOINTS` in `config.py`. |
+| 6.9 | **Overpass is reachable but slow** (20-30s per query under load) | Each POI type is its own round trip, so a multi-type lookup can outlast any sane budget. The foreground call reports the types it could not fetch in `unavailable[]` and the agent says so; an empty list must never be read as "none nearby". Background warming gets a far longer budget because it blocks nobody. |
 
 ---
 
@@ -114,6 +117,9 @@ A comprehensive catalog of edge cases organized by system component. Each entry 
 | 8.7 | **User tries to book without any shortlist** | Say: "You don't have a shortlist yet. Tell me your preferences first, and once you like a listing, I'll help you book a visit." |
 | 8.8 | **User tries to book multiple listings at once** ("Book visits for all of them") | Create separate calendar events for each. Stagger times by 2 hours. Confirm: "I've booked 3 visits for [date]: 10AM, 12PM, and 2PM." |
 | 8.9 | **Duplicate booking** (same listing, same date/time) | Check for existing events. Warn: "You already have a visit booked for this listing on that date. Would you like to reschedule instead?" |
+| 8.10 | **User gives a relative date** ("next Friday", "this weekend") | The model has no clock: without today's date in the prompt it answers from training priors and produces a date months in the past. The session state block carries today's date and weekday in `Asia/Kolkata` plus the next seven days enumerated, because date arithmetic is something LLMs get wrong reliably. |
+| 8.11 | **"Next Friday" is ambiguous** (said on a weekday it can mean either Friday) | Do not guess and do not book. Resolve it, read the calendar date back, and wait for confirmation: "That would be Friday the eighteenth of September, morning slot. Shall I book it?" — offering the nearer Friday and naming the alternative, so a wrong reading costs one word to correct. An explicit date ("September 18th") books directly. |
+| 8.12 | **Server timezone differs from Bengaluru** | "Already passed" must mean passed where the visit happens. A guard comparing against the server's local date would reject or accept a booking differently from the user, and disagree with the date the agent was given. Both compare in `Asia/Kolkata`. |
 
 ---
 
@@ -151,6 +157,8 @@ A comprehensive catalog of edge cases organized by system component. Each entry 
 | 11.3 | **Gemini API rate limit hit** (15 RPM on free tier) | Queue requests. If hit, return: "I'm a bit busy right now. Please try again in a moment." Implement exponential backoff. |
 | 11.4 | **SQLite database file is locked** (concurrent writes) | Use WAL mode for SQLite. For a prototype with single-user expectation, this is unlikely but WAL prevents it. |
 | 11.5 | **Persistent volume lost on redeployment** | Re-run `seed_db.py` on startup if database doesn't exist. Include a health check endpoint. |
+| 11.6 | **Container base image ships no timezone database** | `zoneinfo` resolves against the system tz database, which `python:*-slim` does not include. `ZoneInfo("Asia/Kolkata")` then raises `ZoneInfoNotFoundError` at runtime on a host where it worked locally, failing every turn that builds the date anchor. The `tzdata` package in `requirements.txt` is the fallback; reproduce the failure with `PYTHONTZPATH=""`. |
+| 11.7 | **Dev-only env file baked into a production build** | Vite loads `.env` in every mode, `build` included, so a `VITE_API_URL` meant for local development ends up inlined in the shipped bundle and the deployed UI calls `localhost`. Dev values belong in `.env.development`, which `vite build` never reads. |
 
 ---
 

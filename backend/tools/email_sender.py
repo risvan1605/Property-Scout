@@ -67,6 +67,29 @@ def _plain_text_summary(listings: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _deliver(message) -> None:
+    """Hand one message to the SMTP server.
+
+    Port 465 means implicit TLS (SMTP_SSL); anything else means STARTTLS on a
+    plain connection. Hosts that block outbound 587 to deter spam often leave
+    465 open, so being able to switch with one variable is the difference
+    between email working on a platform and not.
+
+    Raises smtplib.SMTPAuthenticationError for a rejected credential and
+    OSError/SMTPException for anything else, so callers can tell a wrong
+    password from a blocked port.
+    """
+    if SMTP_PORT == 465:
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30, context=_ssl_context()) as smtp:
+            smtp.login(SMTP_USER, SMTP_PASS)
+            smtp.send_message(message)
+        return
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as smtp:
+        smtp.starttls(context=_ssl_context())
+        smtp.login(SMTP_USER, SMTP_PASS)
+        smtp.send_message(message)
+
+
 def configuration_status() -> tuple[bool, str]:
     """Whether email could be sent, and if not, which credential is missing.
 
@@ -127,14 +150,18 @@ def send_shortlist_email(
     _log_structure("shortlist", message)
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as smtp:
-            smtp.starttls(context=_ssl_context())
-            smtp.login(SMTP_USER, SMTP_PASS)
-            smtp.send_message(message)
+        _deliver(message)
     except smtplib.SMTPAuthenticationError:
         # Never log the password itself.
         logger.error("SMTP authentication failed for user %s", SMTP_USER)
         raise EmailError("The email service is currently unavailable.")
+    except (OSError, smtplib.SMTPServerDisconnected) as exc:
+        logger.error(
+            "Could not reach %s:%s — %s. If this is a timeout, the host is very "
+            "likely blocking outbound SMTP; try SMTP_PORT=465.",
+            SMTP_HOST, SMTP_PORT, exc,
+        )
+        raise EmailError("I couldn't send that email just now — please try again shortly.")
     except Exception as exc:
         logger.exception("Sending the shortlist email failed: %s", exc)
         raise EmailError("I couldn't send that email just now — please try again shortly.")
@@ -233,13 +260,17 @@ def send_booking_confirmation(user_email: str, listing: dict, booking: dict) -> 
     _log_structure("booking", message)
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as smtp:
-            smtp.starttls(context=_ssl_context())
-            smtp.login(SMTP_USER, SMTP_PASS)
-            smtp.send_message(message)
+        _deliver(message)
     except smtplib.SMTPAuthenticationError:
         logger.error("SMTP authentication failed for user %s", SMTP_USER)
         raise EmailError("The email service is currently unavailable.")
+    except (OSError, smtplib.SMTPServerDisconnected) as exc:
+        logger.error(
+            "Could not reach %s:%s — %s. If this is a timeout, the host is very "
+            "likely blocking outbound SMTP; try SMTP_PORT=465.",
+            SMTP_HOST, SMTP_PORT, exc,
+        )
+        raise EmailError("I couldn't email the confirmation just now.")
     except Exception as exc:
         logger.exception("Sending the booking confirmation failed: %s", exc)
         raise EmailError("I couldn't email the confirmation just now.")

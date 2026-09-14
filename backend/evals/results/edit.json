@@ -1,6 +1,6 @@
 {
   "eval_name": "edit_correctness",
-  "timestamp": "2026-09-06T09:28:56+00:00",
+  "timestamp": "2026-09-14T08:31:47+00:00",
   "total_tests": 5,
   "passed": 5,
   "failed": 0,
@@ -28,7 +28,7 @@
         ],
         "mutated": []
       },
-      "response_text": "That leaves just one option: the semi-furnished 2BHK at Prestige Oasis for twenty-eight thousand rupees. Would you like to see what's nearby, or shall we book a visit?",
+      "response_text": "I've updated your list, and only the semi-furnished unit at Prestige Oasis remains, at twenty-eight thousand rupees. Would you like to see more details about that one, or perhaps broaden your search?",
       "assertions": [
         {
           "assertion": "all_within_budget<=30000",
@@ -85,7 +85,7 @@
         ],
         "mutated": []
       },
-      "response_text": "I found two pet-friendly 2BHKs under forty thousand rupees. There is Purva Venezia in HSR Layout for thirty-two thousand, and Adarsh Palm Retreat in Indiranagar for forty thousand. Would you like to know more about either of these?",
+      "response_text": "I found two pet-friendly 2BHKs for you. There is Purva Venezia in HSR Layout for thirty-two thousand rupees, and Adarsh Palm Retreat in Indiranagar for forty thousand rupees. Both are fully furnished. Would you like to know more about either of these?",
       "assertions": [
         {
           "assertion": "all_have_pet-friendly",
@@ -138,7 +138,7 @@
         ],
         "mutated": []
       },
-      "response_text": "I've added three more options with balconies to your list. You now have a 2BHK in HSR Layout for twenty-six thousand, a 2BHK in Indiranagar for thirty thousand, and a 3BHK in HSR Layout for thirty-eight thousand. Would you like to see details for any of these?",
+      "response_text": "I've added two more 2BHK options with balconies to your list. There is a semi-furnished place in HSR Layout for twenty-six thousand, and another in Indiranagar for thirty thousand. Would you like to see the details for either of those?",
       "assertions": [
         {
           "assertion": "previous_listings_preserved",
@@ -195,7 +195,7 @@
         ],
         "mutated": []
       },
-      "response_text": "I've narrowed it down to two fully-furnished 2BHKs under thirty-five thousand rupees. You have Purva Venezia in HSR Layout for thirty-two thousand, and Sobha Dream Acres in Koramangala for thirty-five thousand. Would you like to know what's nearby either of these?",
+      "response_text": "I've narrowed it down to two fully furnished 2BHKs under thirty-five thousand rupees. You have Purva Venezia in HSR Layout for thirty-two thousand, and Sobha Dream Acres in Koramangala for thirty-five thousand. Would you like to know more about either of these?",
       "assertions": [
         {
           "assertion": "all_within_budget<=35000",
@@ -238,7 +238,7 @@
         ],
         "mutated": []
       },
-      "response_text": "I've checked again, and SNN Raj Etternia is currently the only 2BHK in HSR Layout under thirty-five thousand rupees that includes a balcony. Would you like to see options in other neighborhoods, or perhaps adjust your budget to see if more become available?",
+      "response_text": "I've checked, and SNN Raj Etternia is the only 2BHK in HSR Layout under thirty-five thousand rupees that currently has a balcony listed. Would you like to expand your search to include Indiranagar or Koramangala to see more options?",
       "assertions": [
         {
           "assertion": "shortlist_identical",

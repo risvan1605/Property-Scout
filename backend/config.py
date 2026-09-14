@@ -124,7 +124,21 @@ PREFETCH_POIS_IN_BACKGROUND = os.getenv("PREFETCH_POIS_IN_BACKGROUND", "true").l
 MCP_MAX_POI_TYPES = int(os.getenv("MCP_MAX_POI_TYPES", "4"))
 # Comma-separated Overpass endpoints, passed through to the MCP server. Set
 # this to a mirror if the default endpoint blocks or rate-limits your host.
-OSM_OVERPASS_ENDPOINTS = os.getenv("OSM_OVERPASS_ENDPOINTS", "")
+#
+# The MCP server has NO default of its own: it validates the list as
+# "at least one item" and refuses every tool call when the variable is absent
+# or blank, so a default has to be supplied here. The mirror is listed second
+# as a fallback for when the main endpoint rate-limits.
+# Both verified to return Bengaluru data. Do NOT add a regional mirror such as
+# overpass.osm.ch here: it answers 200 with zero elements outside its region,
+# which the agent would report as "nothing nearby" rather than as a failure.
+DEFAULT_OVERPASS_ENDPOINTS = (
+    "https://overpass-api.de/api/interpreter,"
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+)
+OSM_OVERPASS_ENDPOINTS = (
+    os.getenv("OSM_OVERPASS_ENDPOINTS", "").strip() or DEFAULT_OVERPASS_ENDPOINTS
+)
 # After the public Overpass API goes dark, stop dialling it for a while — every
 # attempt costs ~25s of retries inside the MCP server before it gives up.
 MCP_CIRCUIT_BREAK_SECONDS = float(os.getenv("MCP_CIRCUIT_BREAK_SECONDS", "300"))

@@ -12,8 +12,8 @@ target calendar with the service account's email ("Make changes to events").
 import logging
 import os
 import re
-from datetime import date as date_type
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from config import GOOGLE_CALENDAR_ID, GOOGLE_SERVICE_ACCOUNT_FILE
 
@@ -91,7 +91,10 @@ def resolve_time_slot(date: str, slot: str) -> tuple[str, str]:
             f"'{date}' doesn't look like a valid date. Could you give it as a day, month and year?"
         )
 
-    if day < date_type.today():
+    # "Already passed" has to mean passed in Bengaluru, where the visit happens —
+    # otherwise a server in another timezone rejects or accepts a booking the
+    # user would judge differently. Matches the anchor the agent is given.
+    if day < datetime.now(ZoneInfo(TIMEZONE)).date():
         raise BookingError(f"{day.isoformat()} has already passed — could you pick a future date?")
 
     start_hour, end_hour = TIME_SLOTS[slot_key]

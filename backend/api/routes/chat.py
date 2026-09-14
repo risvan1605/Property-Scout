@@ -19,7 +19,6 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 class ChatRequest(BaseModel):
     session_id: str | None = Field(default=None, description="Omit to start a new session")
     text: str = Field(min_length=1, description="Transcribed user speech, or typed text")
-    timestamp: str | None = None
 
 
 @router.post("")

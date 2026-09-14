@@ -126,9 +126,10 @@ class OpenStreetMapMCP:
     # ── availability ─────────────────────────────────────────────────────
     def _server_env(self) -> dict:
         env = {**os.environ, "MCP_TRANSPORT_TYPE": "stdio", "MCP_LOG_LEVEL": "error"}
-        # An empty OSM_OVERPASS_ENDPOINTS is worse than an absent one: the server
-        # validates it as a zero-length list and refuses to start. python-dotenv
-        # loads blank .env values into os.environ, so strip them here.
+        # The server refuses every tool call unless it gets at least one Overpass
+        # endpoint — blank and absent both fail its "too_small" validation.
+        # config.OSM_OVERPASS_ENDPOINTS therefore always resolves to a non-empty
+        # default; the guard below stays as a backstop against a blank override.
         if OSM_OVERPASS_ENDPOINTS.strip():
             env["OSM_OVERPASS_ENDPOINTS"] = OSM_OVERPASS_ENDPOINTS.strip()
         else:

@@ -5,6 +5,9 @@ The system prompt, the per-turn state block, and the five function-calling
 declarations the orchestrator hands to Gemini.
 """
 
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
 from google.genai import types
 
 from config import MAX_CLARIFYING_QUESTIONS
@@ -12,6 +15,10 @@ from config import MAX_CLARIFYING_QUESTIONS
 # Neighborhoods the dataset actually covers. Stated up front so the model
 # redirects instead of inventing listings elsewhere in Bengaluru.
 SUPPORTED_NEIGHBORHOODS = ["Koramangala", "Indiranagar", "HSR Layout"]
+
+# Visits are booked in Bengaluru local time, so "today" must mean today there —
+# not wherever the server happens to run. Matches TIMEZONE in tools/google_calendar.py.
+LOCAL_TZ = ZoneInfo("Asia/Kolkata")
 
 
 SYSTEM_PROMPT = f"""You are a voice-first property scout for rental homes in Bengaluru, India.
@@ -98,6 +105,15 @@ spoken naturally ("thirty-two thousand rupees", not "INR 32000.00").
 ## Booking
 - Before booking you need the listing, a date, a time slot (morning, afternoon or
   evening) and the user's email. Ask only for what's missing.
+- A relative date is NOT a confirmed date. When the user says "next Friday",
+  "this weekend", "next week" or similar, resolve it against TODAY, read the
+  calendar date back, and wait for a yes before calling `book_site_visit`:
+  "That would be Friday the eighteenth of September, morning slot. Shall I book it?"
+- "Next Friday" said on a weekday is genuinely ambiguous — it can mean the Friday
+  of this week or the one after. Offer the NEARER Friday and name its date, so a
+  wrong reading costs the user one word to correct.
+- An explicit calendar date ("the eighteenth", "September 18th") is already
+  specific. Don't read it back — book it.
 - Never claim a visit is booked until `book_site_visit` returns a confirmation.
 
 ## Out of scope
@@ -159,7 +175,45 @@ User: "I want to buy a 3BHK in Koramangala under 1.5 crore"
 → Do not search, and do not offer a rental as if it were a sale. "I only have
   rentals, not properties for sale. If renting works for you, tell me your
   monthly budget and I'll find 3BHKs in Koramangala."
+
+User: "book the first one for next friday morning, my email is asha@example.com"
+  (TODAY is Monday 14 September)
+→ "Next Friday" is relative and ambiguous. Do NOT call book_site_visit yet.
+  Resolve to the nearer Friday and read it back: "Next Friday would be the
+  eighteenth of September, morning slot at Prestige Oasis. Shall I book that one,
+  or did you mean the twenty-fifth?"
+
+User: "yes, that one"
+→ Now book it: book_site_visit(listing_id="listing_001",
+  preferred_date="2026-09-18", preferred_time_slot="morning",
+  user_email="asha@example.com").
 """
+
+
+def _date_anchor() -> list[str]:
+    """Today's date plus the next seven days, spelled out.
+
+    The model has no clock, so without this it resolves "next Friday" from
+    whatever its training data suggests — which lands on a date in the past and
+    gets rejected downstream by `resolve_time_slot`. Date arithmetic is also
+    something LLMs get wrong reliably, so the upcoming days are enumerated
+    rather than left to be computed.
+    """
+    today = datetime.now(LOCAL_TZ).date()
+    upcoming = [
+        f"{(today + timedelta(days=n)).strftime('%A')} is "
+        f"{(today + timedelta(days=n)).isoformat()}"
+        for n in range(1, 8)
+    ]
+    return [
+        f"TODAY is {today.strftime('%A')}, {today.strftime('%d %B %Y')} "
+        f"({today.isoformat()}) in Bengaluru local time.",
+        "Upcoming days: " + "; ".join(upcoming) + ".",
+        "Resolve every relative date the user says (\"tomorrow\", \"next Friday\", "
+        "\"this weekend\") against TODAY, and pass the result to book_site_visit as "
+        "an ISO date. NEVER guess a date and never book one in the past. If a "
+        "relative date is genuinely ambiguous, ask which day they mean.",
+    ]
 
 
 def build_state_block(
@@ -170,6 +224,7 @@ def build_state_block(
 ) -> str:
     """Render the live session state that gets appended to the system prompt."""
     lines = ["## CURRENT SESSION STATE"]
+    lines.extend(_date_anchor())
 
     stated = {k: v for k, v in preferences.items() if v not in (None, [], "")}
     lines.append(

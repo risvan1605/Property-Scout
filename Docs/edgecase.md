@@ -120,6 +120,7 @@ A comprehensive catalog of edge cases organized by system component. Each entry 
 | 8.10 | **User gives a relative date** ("next Friday", "this weekend") | The model has no clock: without today's date in the prompt it answers from training priors and produces a date months in the past. The session state block carries today's date and weekday in `Asia/Kolkata` plus the next seven days enumerated, because date arithmetic is something LLMs get wrong reliably. |
 | 8.11 | **"Next Friday" is ambiguous** (said on a weekday it can mean either Friday) | Do not guess and do not book. Resolve it, read the calendar date back, and wait for confirmation: "That would be Friday the eighteenth of September, morning slot. Shall I book it?" — offering the nearer Friday and naming the alternative, so a wrong reading costs one word to correct. An explicit date ("September 18th") books directly. |
 | 8.12 | **Server timezone differs from Bengaluru** | "Already passed" must mean passed where the visit happens. A guard comparing against the server's local date would reject or accept a booking differently from the user, and disagree with the date the agent was given. Both compare in `Asia/Kolkata`. |
+| 8.13 | **The visit books but the confirmation email fails** | Two different outcomes, and the user must not be told the happier one. Both call sites catch the email error and continue, so the booking really did succeed — the agent confirms it, gives the calendar link, and says plainly that the email could not be sent. Claiming an invite is on its way is a statement about the user's inbox that nothing verified. The result's `invite_emailed` flag is what the claim is tied to. |
 
 ---
 
@@ -159,6 +160,7 @@ A comprehensive catalog of edge cases organized by system component. Each entry 
 | 11.5 | **Persistent volume lost on redeployment** | Re-run `seed_db.py` on startup if database doesn't exist. Include a health check endpoint. |
 | 11.6 | **Container base image ships no timezone database** | `zoneinfo` resolves against the system tz database, which `python:*-slim` does not include. `ZoneInfo("Asia/Kolkata")` then raises `ZoneInfoNotFoundError` at runtime on a host where it worked locally, failing every turn that builds the date anchor. The `tzdata` package in `requirements.txt` is the fallback; reproduce the failure with `PYTHONTZPATH=""`. |
 | 11.7 | **Dev-only env file baked into a production build** | Vite loads `.env` in every mode, `build` included, so a `VITE_API_URL` meant for local development ends up inlined in the shipped bundle and the deployed UI calls `localhost`. Dev values belong in `.env.development`, which `vite build` never reads. |
+| 11.8 | **Host blocks outbound SMTP** | Platforms block port 587 to deter spam, which surfaces as a connection timeout rather than an auth error — the credential is valid and works from a laptop, so it reads like an app bug. Port 465 (implicit TLS) is usually left open, so the sender supports both and the log names the host and port it could not reach. If 465 is blocked too, no SMTP will work and delivery has to move to an HTTP email API. |
 
 ---
 

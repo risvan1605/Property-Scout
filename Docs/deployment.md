@@ -78,6 +78,7 @@ git status --short | grep -E "\.env$|service-account|voice-agent-.*\.json" && \
 | `SMTP_USER` | *(from .env)* | Emailing the shortlist PDF |
 | `SMTP_PASS` | *(from .env)* | Gmail **app password**, 16 chars |
 | `ELEVENLABS_API_KEY` | *(from .env)* | Optional; omit → the browser's own voice |
+| `SMTP_PORT` | `465` | Only if email times out on the default 587 — see troubleshooting |
 
 **Do not set anything else.** `GEMINI_MODEL`, `LLM_THINKING_LEVEL`,
 `LLM_TEMPERATURE`, `SMTP_HOST`, `SMTP_PORT`, `ELEVENLABS_VOICE_ID`,
@@ -181,7 +182,10 @@ input. HTTPS is required for microphone access — Railway gives you that.
 | Booking works, no Google invite | Service accounts can't add attendees without Domain-Wide Delegation | Expected on consumer Gmail — the app emails an `.ics` instead |
 | Booking rejected as "already passed" | Server clock vs Bengaluru | The guard compares in `Asia/Kolkata`; `tzdata` must be installed (it's in `requirements.txt`) |
 | "Nearby places unavailable" | Overpass rate-limited or slow | Usually transient. The background prefetch no longer trips the breaker, so a foreground lookup still tries. Set `OSM_OVERPASS_ENDPOINTS` to a **worldwide** mirror if it persists |
-| Email fails, logs show auth error | Not an app password | Gmail → 2-Step Verification → App passwords |
+| Email fails, logs show auth error | Not an app password | Gmail → 2-Step Verification → App passwords. It is exactly 16 characters; an account password will not work |
+| Email fails, logs show a **timeout** reaching `smtp.gmail.com:587` | The host blocks outbound SMTP | Set `SMTP_PORT=465` (implicit TLS). If 465 also times out, all outbound SMTP is blocked — use an HTTP email API instead |
+| Booking succeeds but no email, and the agent says so | Working as intended | The visit is really booked; the calendar link in the reply is valid. Fix the email separately |
+| `health` shows `email:false` | Credentials missing or malformed | The startup log names which: `SMTP_USER`/`SMTP_PASS` unset, or a password of the wrong length |
 
 ---
 

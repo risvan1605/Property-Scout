@@ -67,6 +67,26 @@ def _plain_text_summary(listings: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def configuration_status() -> tuple[bool, str]:
+    """Whether email could be sent, and if not, which credential is missing.
+
+    Checks configuration only — it does not open an SMTP connection, because
+    /api/health must stay fast and a network failure is not a misconfiguration.
+    A valid-looking credential that Gmail then rejects still fails at send time,
+    and that is logged where it happens.
+    """
+    if not SMTP_USER:
+        return False, "SMTP_USER is not set"
+    if not SMTP_PASS:
+        return False, "SMTP_PASS is not set"
+    if len(SMTP_PASS) != 16:
+        return False, (
+            f"SMTP_PASS is {len(SMTP_PASS)} characters — a Gmail app password is 16. "
+            "An account password will not work"
+        )
+    return True, "ok"
+
+
 def send_shortlist_email(
     user_email: str,
     pdf_bytes: bytes | None,

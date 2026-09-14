@@ -54,6 +54,7 @@ def create_booking(request: BookingRequest) -> dict:
             booking["invite_emailed"] = True
         except EmailError as exc:
             logger.warning("Booked, but the confirmation email failed: %s", exc)
+            booking["invite_error"] = str(exc)
 
     session = session_store.get_session(request.session_id) if request.session_id else None
     if session is not None:

@@ -22,6 +22,7 @@ from api.routes import shortlist_pdf as shortlist_pdf_routes
 from api.routes import tts as tts_routes
 from config import CHROMA_DB_PATH, GOOGLE_SERVICE_ACCOUNT_JSON, SQLITE_DB_PATH
 from core.conversation import session_store
+from tools.email_sender import configuration_status as email_status
 from tools.google_calendar import configuration_status as booking_status
 from tools.tts import is_configured as tts_is_configured
 
@@ -91,6 +92,12 @@ async def lifespan(app: FastAPI):
     else:
         logger.error("Booking NOT available: %s", booking_detail)
 
+    email_ok, email_detail = email_status()
+    if email_ok:
+        logger.info("Email ready")
+    else:
+        logger.error("Email NOT available: %s", email_detail)
+
     app.state.listing_count = listing_count
     app.state.chroma_client = _init_chroma()
     app.state.session_store = session_store
@@ -120,12 +127,14 @@ app.include_router(tts_routes.router)
 def health() -> dict:
     """Liveness probe with a summary of what's wired up."""
     booking_ok, _ = booking_status()
+    email_ok, _ = email_status()
     return {
         "status": "ok",
         "listings": getattr(app.state, "listing_count", 0),
         "chroma": getattr(app.state, "chroma_client", None) is not None,
         "voice": tts_is_configured(),
         "booking": booking_ok,
+        "email": email_ok,
     }
 
 

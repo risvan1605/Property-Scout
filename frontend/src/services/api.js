@@ -95,10 +95,21 @@ export async function synthesizeSpeech(text) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
     })
-    if (!response.ok) return null
+    if (!response.ok) {
+      // The backend puts the reason in `detail` — no key, quota spent, reply too
+      // long. Swallowing it silently makes "why am I hearing the robot voice?"
+      // unanswerable from the browser, which is the only place it's visible.
+      const reason = await response
+        .json()
+        .then((body) => body.detail)
+        .catch(() => response.statusText)
+      console.warn(`[tts] falling back to the browser voice: ${response.status} — ${reason}`)
+      return null
+    }
     const blob = await response.blob()
     return URL.createObjectURL(blob)
-  } catch {
+  } catch (error) {
+    console.warn(`[tts] falling back to the browser voice: ${error.message}`)
     return null
   }
 }

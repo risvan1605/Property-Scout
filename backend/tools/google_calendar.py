@@ -9,6 +9,7 @@ account, download its JSON key to `GOOGLE_SERVICE_ACCOUNT_FILE`, and share the
 target calendar with the service account's email ("Make changes to events").
 """
 
+import json
 import logging
 import os
 import re
@@ -103,6 +104,33 @@ def resolve_time_slot(date: str, slot: str) -> tuple[str, str]:
     return start.isoformat(), end.isoformat()
 
 
+def configuration_status() -> tuple[bool, str]:
+    """Whether booking could work, and if not, which precondition failed.
+
+    Deliberately makes no API call: /api/health must stay fast, and a network
+    failure is not the same thing as a misconfiguration. Every string returned
+    here is safe to show — none of it contains key material.
+    """
+    if not GOOGLE_CALENDAR_ID:
+        return False, "GOOGLE_CALENDAR_ID is not set"
+
+    path = _resolve_service_account_path()
+    if not os.path.exists(path):
+        return False, (
+            "service account key file is missing — set GOOGLE_SERVICE_ACCOUNT_JSON "
+            "to the key's full contents, or mount the file"
+        )
+    try:
+        with open(path) as handle:
+            key = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        return False, f"service account key file is unreadable or not valid JSON ({exc.__class__.__name__})"
+    for field in ("client_email", "private_key", "token_uri"):
+        if not key.get(field):
+            return False, f"service account key is missing the '{field}' field"
+    return True, "ok"
+
+
 def validate_email(user_email: str) -> str:
     """Check the address before spending a Calendar API call on it."""
     address = (user_email or "").strip()
@@ -127,6 +155,7 @@ class GoogleCalendarBooking:
             return self._service
 
         if not self.calendar_id:
+            logger.error("GOOGLE_CALENDAR_ID is not set — cannot book")
             raise BookingError("Booking is temporarily unavailable.")
         if not os.path.exists(self.service_account_file):
             logger.error("Service account key not found at %s", self.service_account_file)

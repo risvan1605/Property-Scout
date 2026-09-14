@@ -22,6 +22,7 @@ from api.routes import shortlist_pdf as shortlist_pdf_routes
 from api.routes import tts as tts_routes
 from config import CHROMA_DB_PATH, GOOGLE_SERVICE_ACCOUNT_JSON, SQLITE_DB_PATH
 from core.conversation import session_store
+from tools.google_calendar import configuration_status as booking_status
 from tools.tts import is_configured as tts_is_configured
 
 logging.basicConfig(level=logging.INFO)
@@ -109,12 +110,18 @@ app.include_router(tts_routes.router)
 @app.get("/api/health", tags=["health"])
 def health() -> dict:
     """Liveness probe with a summary of what's wired up."""
-    return {
+    booking_ok, booking_detail = booking_status()
+    report = {
         "status": "ok",
         "listings": getattr(app.state, "listing_count", 0),
         "chroma": getattr(app.state, "chroma_client", None) is not None,
         "voice": tts_is_configured(),
+        "booking": booking_ok,
     }
+    # Only when something is wrong, so a healthy probe stays a flat set of flags.
+    if not booking_ok:
+        report["booking_detail"] = booking_detail
+    return report
 
 
 # ─── Frontend ────────────────────────────────────────────────────────────────

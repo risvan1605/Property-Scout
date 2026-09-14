@@ -54,7 +54,12 @@ export default function VoiceInput() {
       }
 
       const url = await synthesizeSpeech(text)
-      if (url && (await playAudio(url, marks))) return
+      if (url) {
+        if (await playAudio(url, marks)) return
+        // Audio arrived but wouldn't play — autoplay policy or a decode failure.
+        // Distinct from a 503, and worth telling apart when diagnosing.
+        console.warn('[tts] audio fetched but playback was blocked; using the browser voice')
+      }
 
       if (isSynthesisSupported() && speak(text, marks) !== false) return
       return 'blocked'

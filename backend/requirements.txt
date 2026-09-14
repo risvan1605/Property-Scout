@@ -8,5 +8,9 @@ google-auth
 weasyprint
 jinja2
 python-dotenv
+# zoneinfo has no bundled database: python:*-slim ships without
+# /usr/share/zoneinfo, so ZoneInfo("Asia/Kolkata") raises at runtime
+# unless this fallback is installed.
+tzdata
 certifi
 httpx

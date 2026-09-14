@@ -12,6 +12,7 @@ actually returned it.
 
 import asyncio
 import logging
+import random
 from typing import Any, Optional
 
 from google import genai
@@ -30,6 +31,8 @@ from config import (
     LLM_TEMPERATURE,
     LLM_THINKING_LEVEL,
     MAX_HISTORY_MESSAGES,
+    LLM_MAX_ATTEMPTS,
+    LLM_RETRY_BASE_SECONDS,
     MAX_TOOL_CALLS_PER_TURN,
     RAG_MIN_SIMILARITY,
 )
@@ -67,12 +70,30 @@ QUOTA_ERROR_TEXT = (
     "I've used up my AI quota for now, so I can't think about new requests "
     "for a moment. Your shortlist is still on screen — please try again shortly."
 )
+BUSY_ERROR_TEXT = (
+    "The AI service is busy at the moment and didn't answer in time. "
+    "Your shortlist is still on screen — please try that again."
+)
 
 
 def _is_quota_error(exc: Exception) -> bool:
     """Daily/per-minute quota exhaustion, as opposed to a transient blip."""
     text = str(exc)
     return "RESOURCE_EXHAUSTED" in text or "429" in text
+
+
+def _is_transient_error(exc: Exception) -> bool:
+    """Server-side conditions that a later identical request may well survive.
+
+    "This model is currently experiencing high demand" arrives as 503
+    UNAVAILABLE and is the common one — it says nothing about the request, so
+    retrying is the right answer where retrying a 400 would only waste quota.
+    """
+    text = str(exc)
+    return any(
+        marker in text
+        for marker in ("UNAVAILABLE", "503", "INTERNAL", "500", "DEADLINE_EXCEEDED", "504")
+    )
 
 
 class Orchestrator:
@@ -102,9 +123,16 @@ class Orchestrator:
         )
 
     async def _generate(self, contents: list, config: types.GenerateContentConfig):
-        """Call Gemini off the event loop, retrying once on a transient failure."""
+        """Call Gemini off the event loop, backing off through transient failures.
+
+        A 503 "high demand" is the model being busy, not the request being
+        wrong, and one retry 1.5s later is usually still inside the same spike —
+        which surfaced to users as a flat failure every other turn. Transient
+        errors now get the full attempt budget with exponential backoff and
+        jitter, so concurrent turns don't retry in lockstep.
+        """
         last_error: Optional[Exception] = None
-        for attempt in range(2):
+        for attempt in range(LLM_MAX_ATTEMPTS):
             try:
                 return await asyncio.to_thread(
                     self.client.models.generate_content,
@@ -114,13 +142,21 @@ class Orchestrator:
                 )
             except Exception as exc:
                 last_error = exc
-                logger.warning("Gemini call failed (attempt %d): %s", attempt + 1, exc)
+                logger.warning(
+                    "Gemini call failed (attempt %d/%d): %s",
+                    attempt + 1, LLM_MAX_ATTEMPTS, exc,
+                )
                 # Quota errors carry a retry delay measured in minutes — a retry
                 # here just burns another request against the same limit.
                 if _is_quota_error(exc):
                     break
-                if attempt == 0:
-                    await asyncio.sleep(1.5)
+                last_attempt = attempt == LLM_MAX_ATTEMPTS - 1
+                # An unrecognised error gets the one retry it always had; only a
+                # known-transient one is worth waiting out.
+                if last_attempt or not (_is_transient_error(exc) or attempt == 0):
+                    break
+                delay = LLM_RETRY_BASE_SECONDS * (2 ** attempt)
+                await asyncio.sleep(delay + random.uniform(0, delay / 2))
         raise last_error  # type: ignore[misc]
 
     @staticmethod
@@ -453,7 +489,12 @@ class Orchestrator:
                 response_text = (final.text or "").strip()
         except Exception as exc:
             logger.exception("Orchestrator turn failed: %s", exc)
-            message = QUOTA_ERROR_TEXT if _is_quota_error(exc) else FALLBACK_ERROR_TEXT
+            if _is_quota_error(exc):
+                message = QUOTA_ERROR_TEXT
+            elif _is_transient_error(exc):
+                message = BUSY_ERROR_TEXT
+            else:
+                message = FALLBACK_ERROR_TEXT
             session.add_user_message(text)
             session.add_assistant_message(message)
             return self._response(session, message, error=str(exc))

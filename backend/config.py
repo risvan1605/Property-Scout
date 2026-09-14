@@ -91,6 +91,12 @@ LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.2"))
 # Gemini 3.x thinks by default, which costs ~20s per call — far too slow for a
 # spoken reply. "low" keeps tool-routing accuracy at roughly 2s per call.
 LLM_THINKING_LEVEL = os.getenv("LLM_THINKING_LEVEL", "low")
+# Gemini answers 503 UNAVAILABLE ("high demand") under load. That is the model
+# being busy, not the request being wrong, so it is worth waiting out: attempts
+# are spaced 1s, 2s, 4s plus jitter, which covers a typical spike without
+# leaving a voice turn hanging indefinitely.
+LLM_MAX_ATTEMPTS = int(os.getenv("LLM_MAX_ATTEMPTS", "4"))
+LLM_RETRY_BASE_SECONDS = float(os.getenv("LLM_RETRY_BASE_SECONDS", "1.0"))
 
 # Max tool calls the agent may make in a single turn (loop guard).
 MAX_TOOL_CALLS_PER_TURN = int(os.getenv("MAX_TOOL_CALLS_PER_TURN", "5"))

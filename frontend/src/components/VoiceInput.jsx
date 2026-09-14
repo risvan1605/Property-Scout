@@ -55,10 +55,23 @@ export default function VoiceInput() {
 
       const url = await synthesizeSpeech(text)
       if (url) {
-        if (await playAudio(url, marks)) return
-        // Audio arrived but wouldn't play — autoplay policy or a decode failure.
-        // Distinct from a 503, and worth telling apart when diagnosing.
-        console.warn('[tts] audio fetched but playback was blocked; using the browser voice')
+        const outcome = await playAudio(url, marks)
+        if (outcome === true) return
+        if (outcome === 'blocked') {
+          // The browser won't play audio until the visitor interacts. The
+          // ElevenLabs audio is fine and still alive, so wait for the first
+          // gesture and play THAT, rather than discarding it for the robotic
+          // voice — which is what made every greeting sound synthetic.
+          const replay = () => {
+            window.removeEventListener('pointerdown', replay)
+            window.removeEventListener('keydown', replay)
+            playAudio(url, marks)
+          }
+          window.addEventListener('pointerdown', replay, { once: true })
+          window.addEventListener('keydown', replay, { once: true })
+          return 'blocked'
+        }
+        console.warn('[tts] audio fetched but could not be played; using the browser voice')
       }
 
       if (isSynthesisSupported() && speak(text, marks) !== false) return
@@ -77,16 +90,9 @@ export default function VoiceInput() {
     dispatch({ type: 'ADD_MESSAGE', message: { role: 'assistant', text: GREETING } })
     if (!voiceEnabled) return
 
-    let cancelled = false
-    speakReply(GREETING).then((outcome) => {
-      if (cancelled || outcome !== 'blocked') return
-      const replay = () => speakReply(GREETING)
-      window.addEventListener('pointerdown', replay, { once: true })
-      window.addEventListener('keydown', replay, { once: true })
-    })
-    return () => {
-      cancelled = true
-    }
+    // speakReply now owns the blocked-audio retry and replays the audio it
+    // already has; re-calling it here would buy a second copy from ElevenLabs.
+    speakReply(GREETING)
   }, [sessionChecked, messages.length, voiceEnabled, dispatch, speakReply])
 
   const submit = useCallback(

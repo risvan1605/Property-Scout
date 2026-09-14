@@ -121,8 +121,16 @@ let currentAudio = null
 /**
  * Play synthesized audio from the backend.
  *
- * Resolves false if playback can't start (autoplay blocked, decode failure),
- * so the caller can fall back to the browser voice.
+ * Resolves `true` when playing, `'blocked'` when the browser refused to
+ * autoplay, and `false` when the audio genuinely cannot be played.
+ *
+ * The three are not interchangeable. A browser refuses audio until the visitor
+ * has interacted with the page, which is not a failure of the audio — the same
+ * blob plays perfectly once they click. Treating that as `false` meant falling
+ * straight through to the robotic browser voice AND revoking the blob, so the
+ * ElevenLabs audio we had already fetched and paid for was thrown away, and the
+ * element's pending load failed with ERR_FILE_NOT_FOUND. On `'blocked'` the URL
+ * is deliberately left alive so the caller can replay it on the first gesture.
  */
 export function playAudio(url, { onStart, onEnd } = {}) {
   return new Promise((resolve) => {
@@ -130,15 +138,18 @@ export function playAudio(url, { onStart, onEnd } = {}) {
     const audio = new Audio(url)
     currentAudio = audio
 
-    const finish = () => {
+    const release = () => {
       if (currentAudio === audio) currentAudio = null
       URL.revokeObjectURL(url)
       onEnd?.()
     }
 
-    audio.onended = finish
+    audio.onended = release
     audio.onerror = () => {
-      finish()
+      // A blocked play() already resolved; don't revoke the URL out from under
+      // the retry, and don't report an end that never started.
+      if (audio.dataset.blocked === '1') return
+      release()
       resolve(false)
     }
     audio
@@ -147,8 +158,14 @@ export function playAudio(url, { onStart, onEnd } = {}) {
         onStart?.()
         resolve(true)
       })
-      .catch(() => {
-        finish()
+      .catch((error) => {
+        if (error?.name === 'NotAllowedError') {
+          audio.dataset.blocked = '1'
+          if (currentAudio === audio) currentAudio = null
+          resolve('blocked')
+          return
+        }
+        release()
         resolve(false)
       })
   })

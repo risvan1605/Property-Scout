@@ -82,6 +82,15 @@ async def lifespan(app: FastAPI):
     listing_count = _check_sqlite()
     logger.info("SQLite ready: %d listings", listing_count)
 
+    # Say once, where only the operator can see it, why booking is or is not
+    # ready. /api/health reports the boolean; the reason names variables and
+    # file state, which is not something an unauthenticated probe should learn.
+    booking_ok, booking_detail = booking_status()
+    if booking_ok:
+        logger.info("Booking ready")
+    else:
+        logger.error("Booking NOT available: %s", booking_detail)
+
     app.state.listing_count = listing_count
     app.state.chroma_client = _init_chroma()
     app.state.session_store = session_store
@@ -110,18 +119,14 @@ app.include_router(tts_routes.router)
 @app.get("/api/health", tags=["health"])
 def health() -> dict:
     """Liveness probe with a summary of what's wired up."""
-    booking_ok, booking_detail = booking_status()
-    report = {
+    booking_ok, _ = booking_status()
+    return {
         "status": "ok",
         "listings": getattr(app.state, "listing_count", 0),
         "chroma": getattr(app.state, "chroma_client", None) is not None,
         "voice": tts_is_configured(),
         "booking": booking_ok,
     }
-    # Only when something is wrong, so a healthy probe stays a flat set of flags.
-    if not booking_ok:
-        report["booking_detail"] = booking_detail
-    return report
 
 
 # ─── Frontend ────────────────────────────────────────────────────────────────

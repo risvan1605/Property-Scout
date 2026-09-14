@@ -86,12 +86,11 @@ git status --short | grep -E "\.env$|service-account|voice-agent-.*\.json" && \
 default to exactly the values a deployment wants. Set one only to *change* it —
 the table in `backend/.env.example` documents what each does.
 
-Three that would be actively wrong here:
+Two that would be actively wrong here:
 
 - `PORT` — Railway injects it and `entrypoint.sh` reads it; setting it breaks routing.
 - `FRONTEND_URL` — only meaningful for a split deployment (§7). One container
   serving both halves has no cross-origin request to allow.
-- `BACKEND_URL` — dead: defined in `config.py` and referenced nowhere.
 
 5. **Deploy.** Watch the build log for three things: the Node stage running
    `npm ci` and `vite build`, the apt step installing `libpango`/`libcairo`

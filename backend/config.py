@@ -72,7 +72,6 @@ ALLOWED_ORIGINS = [o.strip() for o in FRONTEND_URL.split(",") if o.strip()]
 # Optional regex for origins that change per deploy, e.g. Vercel previews:
 #   ALLOWED_ORIGIN_REGEX=https://property-scout-.*\.vercel\.app
 ALLOWED_ORIGIN_REGEX = _setting("ALLOWED_ORIGIN_REGEX")
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 # ─── Database Paths ──────────────────────────────────────────────────────────
 # Overridable so a hosting volume can hold them: mounting a volume over the app

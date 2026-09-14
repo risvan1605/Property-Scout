@@ -111,6 +111,11 @@ ENRICH_MAX_LISTINGS = int(os.getenv("ENRICH_MAX_LISTINGS", "3"))
 ENRICH_POI_TYPES = ["metro_station", "grocery", "hospital"]
 ENRICH_RADIUS_METERS = int(os.getenv("ENRICH_RADIUS_METERS", "1500"))
 ENRICH_TIME_BUDGET_SECONDS = float(os.getenv("ENRICH_TIME_BUDGET_SECONDS", "45"))
+# Background warming blocks nobody, so it gets a budget that survives a slow
+# Overpass. One point costs a spawn plus one round trip per POI type, and
+# those round trips run from ~2s to ~30s depending on Overpass load — 45s
+# could not finish a single point when the public endpoints were busy.
+PREFETCH_TIME_BUDGET_SECONDS = float(os.getenv("PREFETCH_TIME_BUDGET_SECONDS", "240"))
 # Blocking POI enrichment adds ~45s to a chat turn (npx spawn + one live
 # Overpass query per listing per POI type), which a voice conversation cannot
 # absorb. Instead the turn returns immediately and the POI cache is warmed in

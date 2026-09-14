@@ -24,6 +24,7 @@ from config import (
     ENRICH_POI_TYPES,
     ENRICH_RADIUS_METERS,
     ENRICH_TIME_BUDGET_SECONDS,
+    PREFETCH_TIME_BUDGET_SECONDS,
     GEMINI_API_KEY,
     GEMINI_MODEL,
     LLM_TEMPERATURE,
@@ -678,7 +679,10 @@ def _prefetch_pois(points: list[tuple[float, float]]) -> None:
         try:
             await osm_mcp.query_nearby_batch(
                 points, radius_meters=ENRICH_RADIUS_METERS, poi_types=ENRICH_POI_TYPES,
-                timeout_seconds=ENRICH_TIME_BUDGET_SECONDS,
+                timeout_seconds=PREFETCH_TIME_BUDGET_SECONDS,
+                # A warm-up that runs out of time must not disable the lookup the
+                # user is about to ask for by hand.
+                trip_circuit=False, label="prefetch",
             )
         except Exception as exc:
             logger.warning("Background POI prefetch failed: %s", exc)

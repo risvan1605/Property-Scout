@@ -333,6 +333,8 @@ class OpenStreetMapMCP:
         radius_meters: int = DEFAULT_RADIUS_METERS,
         poi_types: Optional[list[str]] = None,
         timeout_seconds: float = CALL_TIMEOUT_SECONDS,
+        trip_circuit: bool = True,
+        label: str = "batch",
     ) -> list[Optional[dict]]:
         """
         POIs for several coordinates, sharing one server process.
@@ -340,6 +342,11 @@ class OpenStreetMapMCP:
         Cached points are served without a round trip. Returns one entry per
         input point, aligned by index; an entry is None only if the whole
         batch failed, so callers can tell "no data" from "none nearby".
+
+        `trip_circuit=False` lets a caller fail without opening the breaker for
+        everyone else. Background warming passes it: nobody is waiting on that
+        work, and its timeout says nothing about whether a single foreground
+        lookup would have succeeded.
         """
         poi_types = self._limit_poi_types(poi_types)
         out: list[Optional[dict]] = [None] * len(points)
@@ -371,7 +378,10 @@ class OpenStreetMapMCP:
                 logger.info("Skipping POI batch — OpenStreetMap MCP is in cool-off")
                 return out
 
-            out = await self._fetch_pending(pending, out, radius_meters, poi_types, timeout_seconds)
+            out = await self._fetch_pending(
+                pending, out, radius_meters, poi_types, timeout_seconds,
+                trip_circuit=trip_circuit, label=label,
+            )
         return out
 
     async def _fetch_pending(
@@ -381,6 +391,8 @@ class OpenStreetMapMCP:
         radius_meters: int,
         poi_types: list[str],
         timeout_seconds: float,
+        trip_circuit: bool = True,
+        label: str = "batch",
     ) -> list[Optional[dict]]:
         """Fetch the uncached points. Caller must hold the session lock."""
         # Collect into a sink so a timeout keeps whatever already finished.
@@ -395,15 +407,21 @@ class OpenStreetMapMCP:
         except asyncio.TimeoutError:
             task.cancel()
             logger.warning(
-                "OpenStreetMap MCP batch timed out after %.0fs with %d/%d points done",
-                timeout_seconds, len(fetched), len(pending),
+                "OpenStreetMap MCP %s timed out after %.0fs with %d/%d points done",
+                label, timeout_seconds, len(fetched), len(pending),
             )
         except Exception as exc:
             task.cancel()
-            logger.warning("OpenStreetMap MCP batch failed: %s", exc)
+            logger.warning("OpenStreetMap MCP %s failed: %s", label, exc)
 
         if not fetched:
-            self._trip_circuit()
+            if trip_circuit:
+                self._trip_circuit()
+            else:
+                logger.info(
+                    "OpenStreetMap MCP %s came back empty; leaving the circuit closed "
+                    "so foreground lookups still try", label,
+                )
             return out
 
         for (i, (lat, lng)), entry in zip(pending, fetched):

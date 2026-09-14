@@ -1,0 +1,32 @@
+# Build context is the repo root, so both halves' junk has to be named here.
+.git/
+.gitignore
+Docs/
+README.md
+.playwright-mcp/
+
+# Python
+backend/.venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node — node_modules is reinstalled by `npm ci` in the build stage, and
+# shipping it would dwarf the rest of the context.
+frontend/node_modules/
+frontend/dist/
+
+# Secrets. Keys reach the container through environment variables; none of
+# these may ever enter an image layer.
+.env
+**/.env
+backend/service-account.json
+**/service-account.json
+*service-account*.json
+voice-agent-*.json
+client_secret_*.json
+
+# Build artefacts of seed_db.py, rebuilt on first boot by entrypoint.sh.
+backend/listings.db
+backend/chroma_db/
+backend/evals/results/

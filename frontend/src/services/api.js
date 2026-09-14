@@ -5,7 +5,12 @@
  * show the user — the backend writes its `detail` strings for exactly that.
  */
 
-const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+// Production serves this bundle from the same origin as the API, so the base
+// is empty and every path resolves against wherever the page was loaded from.
+// In `vite dev` the UI is on :5173 and the API on :8000, so it needs the
+// absolute URL. VITE_API_URL overrides both, for a split deployment.
+const DEFAULT_BASE = import.meta.env.DEV ? 'http://localhost:8000' : ''
+const BASE_URL = (import.meta.env.VITE_API_URL || DEFAULT_BASE).replace(/\/$/, '')
 
 async function request(path, options = {}) {
   let response

@@ -1,26 +1,24 @@
-# Deployment Plan — Railway (backend) + Vercel (frontend)
+# Deployment Plan — Railway (one service)
 
 Target topology:
 
 ```
-  Browser ──HTTPS──> Vercel (static React build)
-                          │  VITE_API_URL (baked in at build time)
-                          ▼
-                     Railway (Docker: FastAPI + Node for MCP)
-                          ├── Gemini API        (agent + embeddings)
-                          ├── ElevenLabs        (spoken replies)
-                          ├── Overpass via MCP   (nearby places)
-                          ├── Google Calendar    (site visits)
-                          └── Gmail SMTP         (shortlist PDF)
+  Browser ──HTTPS──> Railway (one container)
+                        ├── /            → the compiled React bundle
+                        └── /api/*       → FastAPI
+                              ├── Gemini API       (agent + embeddings)
+                              ├── ElevenLabs       (spoken replies)
+                              ├── Overpass via MCP (nearby places)
+                              ├── Google Calendar  (site visits)
+                              └── Gmail SMTP       (shortlist PDF)
 ```
 
-**Deploy in this order.** Each side needs the other's URL, so the loop is closed in
-step 4 rather than up front:
+The root [`Dockerfile`](../Dockerfile) builds the Vite bundle in a Node stage and
+copies it into the Python image at `backend/static`, which `main.py` serves. The
+UI and the API therefore share an origin — **nothing is cross-origin, so there is
+no CORS to configure and no URL to wire back and forth.**
 
-> backend first (get its URL) → frontend with that URL (get its URL) → set the
-> frontend URL back on the backend for CORS → redeploy backend.
-
-Budget about 40 minutes for a first run, most of it waiting on builds.
+Budget about 20 minutes for a first run, most of it waiting on the build.
 
 ---
 
@@ -28,14 +26,14 @@ Budget about 40 minutes for a first run, most of it waiting on builds.
 
 | Need | Notes |
 |---|---|
-| GitHub repo | The project has no commits yet — step 1 covers it |
+| GitHub repo | `https://github.com/risvan1605/Property-Scout.git` |
 | Railway account | railway.app — Hobby plan is enough |
-| Vercel account | vercel.com — Hobby plan is enough |
 | Your keys | Everything currently in `backend/.env` — you'll re-enter them in Railway |
 
 Have `backend/.env` open while you work; step 2 copies values out of it.
-**`.env` and `service-account.json` are gitignored and must stay that way** — the
-Google key goes to Railway as an environment variable instead of a file.
+**`.env`, `service-account.json` and `voice-agent-*.json` are gitignored and
+`.dockerignore`d, and must stay that way** — the Google key goes to Railway as an
+environment variable instead of a file.
 
 ---
 
@@ -43,11 +41,7 @@ Google key goes to Railway as an environment variable instead of a file.
 
 ```bash
 cd "/Users/ris/Antigravity/Capstone project"
-git add .
-git commit -m "Voice-first AI property scout"
-git branch -M main
-git remote add origin https://github.com/<you>/property-scout.git
-git push -u origin main
+git push origin main
 ```
 
 **Before pushing, confirm no secrets are staged:**
@@ -57,18 +51,19 @@ git status --short | grep -E "\.env$|service-account|voice-agent-.*\.json" && \
   echo "STOP — secrets staged" || echo "clean"
 ```
 
-97 files should be tracked. `backend/.env`, `backend/service-account.json`,
-`backend/chroma_db/` and `backend/listings.db` must **not** appear.
+`backend/.env`, `backend/service-account.json`, `backend/chroma_db/`,
+`backend/listings.db` and `backend/static/` must **not** appear.
 
 ---
 
-## 2. Backend on Railway
+## 2. Deploy on Railway
 
 1. **New Project → Deploy from GitHub repo** → pick the repo.
-2. **Settings → Source → Root Directory: `backend`.**
-   This is the step people miss. Without it Railway looks for a Dockerfile at the
-   repo root and the build fails.
-3. Railway reads `backend/railway.json`: Docker builder, health check on
+2. **Leave Root Directory empty.** The build context must be the repository root,
+   because the image needs both `frontend/` and `backend/`. Setting it to
+   `backend` — which earlier versions of this guide told you to do — makes the
+   build fail on the missing `frontend/` directory.
+3. Railway reads `railway.json` at the root: Docker builder, health check on
    `/api/health` with a 300s timeout (generous, because the first boot seeds the
    vector store).
 4. **Variables** — add these (values from `backend/.env`):
@@ -86,16 +81,17 @@ git status --short | grep -E "\.env$|service-account|voice-agent-.*\.json" && \
 | `SMTP_PORT` | `587` | |
 | `SMTP_USER` | *(from .env)* | |
 | `SMTP_PASS` | *(from .env)* | Gmail **app password**, 16 chars |
-| `FRONTEND_URL` | `http://localhost:5173` | Placeholder — corrected in step 4 |
 
 Do **not** set `PORT`; Railway injects it and `entrypoint.sh` reads it.
+`FRONTEND_URL` is **not needed** — it only matters for a split deployment.
 
-5. **Deploy.** Watch the build log for two things: the apt step installing
-   `libpango`/`libcairo` (WeasyPrint), and `nodejs` (the MCP server runs via `npx`).
-   First boot then seeds SQLite and embeds 27 chunks into ChromaDB — roughly 30–60s,
-   and it costs ~27 Gemini embedding calls.
+5. **Deploy.** Watch the build log for three things: the Node stage running
+   `npm ci` and `vite build`, the apt step installing `libpango`/`libcairo`
+   (WeasyPrint) and `nodejs` (the MCP server runs via `npx`). First boot then
+   seeds SQLite and embeds 27 chunks into ChromaDB — roughly 30–60s, and it costs
+   ~27 Gemini embedding calls.
 6. **Settings → Networking → Generate Domain.** Note the URL, e.g.
-   `https://property-scout-api.up.railway.app`.
+   `https://property-scout.up.railway.app`. That single URL serves both halves.
 7. Confirm it's alive:
 
 ```bash
@@ -116,66 +112,34 @@ SQLITE_DB_PATH=/data/listings.db
 CHROMA_DB_PATH=/data/chroma_db
 ```
 
-Mount at `/data`, never at `/app` — a volume there would shadow the application code.
+Mount at `/data`, never at `/app` — a volume there would shadow the application
+code, the compiled frontend included.
 
 ---
 
-## 3. Frontend on Vercel
+## 3. Verify the deployment
 
-1. **Add New → Project** → same GitHub repo.
-2. **Root Directory: `frontend`.** Framework preset auto-detects as Vite.
-3. **Environment Variables:**
-
-| Variable | Value |
-|---|---|
-| `VITE_API_URL` | `https://<your-railway-domain>` — no trailing slash |
-
-   Vite inlines this **at build time**, so changing it later requires a redeploy,
-   not just a restart.
-4. **Deploy**, then note the URL, e.g. `https://property-scout.vercel.app`.
-
-At this point the app loads but every request fails CORS. That's expected — step 4
-fixes it.
-
----
-
-## 4. Close the CORS loop
-
-Back in **Railway → Variables**, set:
-
-```
-FRONTEND_URL=https://property-scout.vercel.app
-```
-
-Comma-separate to allow more than one origin. For Vercel preview deployments, whose
-URL changes every push, add a regex instead of listing them:
-
-```
-ALLOWED_ORIGIN_REGEX=https://property-scout-.*\.vercel\.app
-```
-
-Railway redeploys on variable change. Wait for it to go green, then hard-reload the
-Vercel site.
-
----
-
-## 5. Verify the deployment
-
-Run these against the live backend:
+Run these against the live service — one domain for everything:
 
 ```bash
-API=https://<your-railway-domain>
+APP=https://<your-railway-domain>
 
-curl -s $API/api/health                     # all four flags true
-curl -s $API/api/listings | head -c 120     # 15 listings
-curl -s -X POST $API/api/chat \
+curl -s -o /dev/null -w '%{http_code} %{content_type}\n' $APP/          # 200 text/html
+curl -s $APP/api/health                     # all four flags true
+curl -s $APP/api/listings | head -c 120     # 15 listings
+curl -s -X POST $APP/api/chat \
   -H 'Content-Type: application/json' \
   -d '{"text":"2BHK in Koramangala under 35k"}' | head -c 300
-curl -s -o /dev/null -w '%{http_code}\n' -X POST $API/api/tts \
+curl -s -o /dev/null -w '%{http_code}\n' -X POST $APP/api/tts \
   -H 'Content-Type: application/json' -d '{"text":"Hello"}'   # 200
+curl -s -o /dev/null -w '%{http_code}\n' $APP/api/no-such-route   # 404, not HTML
 ```
 
-Then in **Chrome** on the Vercel URL:
+That last one matters: an unmatched `/api/*` path must 404 rather than fall through
+to the SPA shell. A `fetch` that receives an index page instead of JSON is far
+harder to debug than an honest 404.
+
+Then in **Chrome** on the same URL:
 
 - [ ] The scout greets you out loud on load
 - [ ] Mic button → allow microphone → speak "2BHK in Koramangala under 35k"
@@ -183,21 +147,24 @@ Then in **Chrome** on the Vercel URL:
 - [ ] Open a card → neighborhood panel + proximity dial with real POIs
 - [ ] Sources panel lists citations with working links
 - [ ] "Drop anything above 30k" → shortlist narrows
-- [ ] Book a visit → confirmation panel + calendar link; check the invite email
+- [ ] Deep-link a client route (reload on a non-root path) → the app still loads
+- [ ] Book a visit for "next Friday" → it reads the date back before booking
+- [ ] Confirm → confirmation panel + calendar link; check the invite email
 - [ ] "Email me the shortlist at …" → PDF arrives
 
 Voice input needs **Chrome or Edge**; Safari and Firefox fall back to the typed
-input. HTTPS is required for microphone access — both platforms give you that.
+input. HTTPS is required for microphone access — Railway gives you that.
 
 ---
 
-## 6. Troubleshooting
+## 4. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Build fails, "Dockerfile not found" | Root Directory not set | Railway → Settings → Root Directory = `backend` |
-| Browser console: CORS blocked | `FRONTEND_URL` still the placeholder | Step 4, then wait for the redeploy |
-| Frontend calls `localhost:8000` | `VITE_API_URL` missing at build | Set it in Vercel, then **redeploy** (build-time) |
+| Build fails, "Dockerfile not found" | Root Directory set | Railway → Settings → Root Directory must be **empty** |
+| Build fails in the Node stage | `package-lock.json` out of sync | Run `npm install` in `frontend/`, commit the lockfile |
+| `/` returns 404, API works | Frontend stage didn't copy | Check the build log for `vite build`; `backend/static/index.html` must exist in the image |
+| UI loads, every call 404s | Bundle built with a stale base URL | `VITE_API_URL` must be **unset** for this deployment; check `frontend/.env.development` isn't being read at build |
 | `health` shows `chroma:false` | Seeding failed | Check `GEMINI_API_KEY`; see deploy logs for the seed step |
 | `health` shows `voice:false` | No ElevenLabs key | Add `ELEVENLABS_API_KEY` |
 | Replies take ~20s | `LLM_THINKING_LEVEL` unset | Set it to `low` |
@@ -205,12 +172,13 @@ input. HTTPS is required for microphone access — both platforms give you that.
 | TTS silent, logs show 402 | Voice Library voice on a free plan | Use a premade voice id (Sarah is the default) |
 | "Booking is temporarily unavailable" | Key or calendar sharing | Check `GOOGLE_SERVICE_ACCOUNT_JSON` parses; share the calendar with the service-account email |
 | Booking works, no Google invite | Service accounts can't add attendees without Domain-Wide Delegation | Expected on consumer Gmail — the app emails an `.ics` instead |
-| "Nearby places unavailable" | Overpass rate-limited the host | Usually transient; the circuit breaker retries after 5 min. Or set `OSM_OVERPASS_ENDPOINTS` to a mirror |
+| Booking rejected as "already passed" | Server clock vs Bengaluru | The guard compares in `Asia/Kolkata`; `tzdata` must be installed (it's in `requirements.txt`) |
+| "Nearby places unavailable" | Overpass rate-limited or slow | Usually transient. The background prefetch no longer trips the breaker, so a foreground lookup still tries. Set `OSM_OVERPASS_ENDPOINTS` to a **worldwide** mirror if it persists |
 | Email fails, logs show auth error | Not an app password | Gmail → 2-Step Verification → App passwords |
 
 ---
 
-## 7. Running costs
+## 5. Running costs
 
 Everything sits on free tiers, with these ceilings:
 
@@ -218,25 +186,41 @@ Everything sits on free tiers, with these ceilings:
 - **ElevenLabs**: ~10k characters/month (~65 replies). Identical replies are cached;
   past the cap it falls back to the browser voice rather than going silent.
 - **Overpass**: no key, but it rate-limits by IP.
-- **Railway**: Hobby plan usage-based; this service idles cheaply.
-- **Vercel**: static hosting, comfortably inside the Hobby tier.
+- **Railway**: Hobby plan usage-based; this service idles cheaply. One service now
+  instead of two, and the image is a little larger for carrying the bundle.
 
 For a live demo, the Gemini daily cap is the real constraint — don't burn the day's
 500 on rehearsals.
 
 ---
 
-## 8. Redeploying and rolling back
+## 6. Redeploying and rolling back
 
-- **Backend**: push to `main` → Railway rebuilds. Roll back from
-  **Deployments → ⋯ → Redeploy** on an earlier build.
-- **Frontend**: push to `main` → Vercel rebuilds. **Instant Rollback** on any prior
-  deployment.
-- **Changing a variable** on Railway triggers a redeploy; on Vercel, `VITE_*`
-  variables need a fresh build to take effect.
+Push to `main` → Railway rebuilds both halves together. Roll back from
+**Deployments → ⋯ → Redeploy** on an earlier build; because the frontend ships
+inside the same image, a rollback reverts the UI and the API as one unit.
 
-## 9. After deploying
+Changing a variable triggers a redeploy. Note that `VITE_*` variables are inlined
+at **build** time, so they need a rebuild rather than a restart — this deployment
+deliberately uses none.
 
-Update `README.md` with the two live URLs, and record the demo video against the
+---
+
+## 7. Splitting the frontend out again
+
+If you later want the UI on a CDN instead:
+
+1. Host `frontend/` as a static Vite build, setting `VITE_API_URL` to the Railway
+   domain (no trailing slash).
+2. Set `FRONTEND_URL` on Railway to the UI's origin, or `ALLOWED_ORIGIN_REGEX` for
+   preview URLs whose hostname changes per push.
+
+The CORS middleware is still wired up for exactly this, and for local development.
+
+---
+
+## 8. After deploying
+
+Update `README.md` with the live URL, and record the demo video against the
 deployed site rather than localhost — it's more convincing, and it proves the
 deployment works.

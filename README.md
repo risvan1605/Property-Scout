@@ -217,21 +217,28 @@ Scout  Booked for October fourth, ten to twelve. The invite is on its way.
 
 ## Deployment
 
-The backend ships as a container (`backend/Dockerfile`) because it needs both
-WeasyPrint's native libraries and Node.js for the MCP server. `backend/entrypoint.sh`
-seeds the database on first boot if it's missing, then serves on `$PORT`.
+The whole app ships as **one container** from the root [`Dockerfile`](Dockerfile).
+A Node stage compiles the Vite bundle; the Python stage copies it to
+`backend/static` and serves it alongside the API, so the UI and the API share an
+origin. The image carries WeasyPrint's native libraries and Node.js, which the
+MCP server needs. `backend/entrypoint.sh` seeds the database on first boot if
+it's missing, then serves on `$PORT`.
 
-**Backend — Railway** (`backend/railway.json`): set the service's Root Directory to
-`backend`, add the environment variables, and deploy. Instead of a key file, set
-`GOOGLE_SERVICE_ACCOUNT_JSON` to the whole JSON — the app writes it to disk at
-startup with mode 600.
+**Railway** (`railway.json` at the root): leave the service's Root Directory
+**empty** — the build context is the repository root, because the image needs
+both `frontend/` and `backend/`. Add the environment variables and deploy.
+Instead of a key file, set `GOOGLE_SERVICE_ACCOUNT_JSON` to the whole JSON — the
+app writes it to disk at startup with mode 600.
 
-**Frontend — Vercel**: root `frontend/`, config in
-[`frontend/vercel.json`](frontend/vercel.json). Set `VITE_API_URL` to the backend URL
-— Vite inlines it at build time, so changing it needs a redeploy.
+**No CORS configuration is needed** for this deployment: the browser loads the
+bundle and calls the API on the same origin, so nothing is cross-origin. The
+middleware stays in place for local development, where Vite serves the UI on
+:5173 against the API on :8000.
 
-**CORS:** set `FRONTEND_URL` on the backend to the deployed frontend origin, or
-`ALLOWED_ORIGIN_REGEX` for Vercel preview URLs, or the browser blocks every request.
+**Splitting them instead** (a separate static host) still works: set
+`VITE_API_URL` on the frontend build to the API's URL, and `FRONTEND_URL` — or
+`ALLOWED_ORIGIN_REGEX` for preview URLs — on the backend, or the browser blocks
+every request.
 
 Step-by-step, in order, with a verification checklist and a troubleshooting table:
 [`deployment.md`](Docs/deployment.md).

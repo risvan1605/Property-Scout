@@ -213,6 +213,17 @@ def configuration_status() -> tuple[bool, str]:
     if provider != "smtp":
         if not EMAIL_FROM:
             return False, f"{provider} is configured but EMAIL_FROM (or SMTP_USER) is not set"
+        # Brevo issues two credentials on the same settings page: an SMTP key
+        # for its mail relay and an `xkeysib-` API key for the HTTPS endpoint
+        # this uses. Only the second one works here, and picking the wrong one
+        # fails with a 401 that reads like a bad key rather than a wrong kind.
+        if provider == "brevo" and not BREVO_API_KEY.startswith("xkeysib-"):
+            return False, (
+                "BREVO_API_KEY does not start with 'xkeysib-' — this needs the v3 API "
+                "key from the API Keys tab, not the SMTP key"
+            )
+        if provider == "resend" and not RESEND_API_KEY.startswith("re_"):
+            return False, "RESEND_API_KEY does not start with 're_' — check the value"
         return True, f"ok (via {provider})"
 
     if not SMTP_USER:

@@ -28,6 +28,8 @@ A comprehensive catalog of edge cases organized by system component. Each entry 
 | 2.2 | **Very long assistant response** | Truncate TTS to first 2-3 sentences. Full response shown in transcript panel. Add: "You can see the full details in the shortlist panel." |
 | 2.3 | **TTS not available** | Silently skip voice output. Show response in transcript only. No error needed. |
 | 2.4 | **Rupee symbol (₹) and numbers in TTS** | TTS may say "rupee symbol" instead of "rupees". Format as "35,000 rupees per month" in the spoken text. |
+| 2.5 | **TTS provider returns 401 for an exhausted quota, not 429** | ElevenLabs answers 401 with `status: quota_exceeded` in the body when credits run out, so a status-code-only check reports a perfectly good key as revoked — and sends whoever is debugging off to rotate a key that was never the problem. Read the body: quota is temporary and fixes itself, a bad credential is not and does not. |
+| 2.6 | **Speech quota runs out mid-demo** | The browser voice takes over and the app keeps working, which is right, but nothing says why. `/api/health` reports `voice:false` once the provider has actually refused a request, rather than trusting that a key is present. |
 
 ---
 

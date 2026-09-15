@@ -42,6 +42,9 @@ class TTSUnavailable(RuntimeError):
 # voice is unavailable instead of reporting "configured" for a key that has been
 # revoked. A later success clears it, so rotating the key needs no restart.
 _key_rejected = False
+# Quota is a different thing entirely: the credential is good, the credits are
+# spent, and it comes right on its own when the allowance resets.
+_quota_exhausted = False
 
 
 def is_configured() -> bool:
@@ -58,6 +61,8 @@ def runtime_status() -> tuple[bool, str]:
         return False, "ELEVENLABS_API_KEY is not set"
     if _key_rejected:
         return False, "ElevenLabs rejected the API key — it may have been revoked or rotated"
+    if _quota_exhausted:
+        return False, "ElevenLabs credits are spent — the key is valid; the allowance is not"
     return True, "ok"
 
 
@@ -161,11 +166,25 @@ async def synthesize(text: str, voice_id: str | None = None) -> tuple[bytes, boo
         raise TTSUnavailable(f"Speech service unreachable: {exc}")
 
     if response.status_code == 401:
+        # ElevenLabs answers 401 for an exhausted quota as well as for a bad
+        # credential, with only the body telling them apart. Reading the status
+        # code alone reports a working key as revoked and sends whoever is
+        # debugging off to rotate a key that was never the problem.
+        reason = _upstream_reason(response)
+        if reason == "quota_exceeded":
+            global _quota_exhausted
+            _quota_exhausted = True
+            logger.warning(
+                "ElevenLabs credits are spent — the key is fine. Speech falls back "
+                "to the browser voice until the quota resets or the plan is upgraded."
+            )
+            raise TTSUnavailable("Speech quota exhausted for now")
         global _key_rejected
         _key_rejected = True
         logger.error(
-            "ElevenLabs rejected the API key — replace ELEVENLABS_API_KEY. "
-            "Speech falls back to the browser voice until it is valid."
+            "ElevenLabs rejected the API key (%s) — replace ELEVENLABS_API_KEY. "
+            "Speech falls back to the browser voice until it is valid.",
+            reason or "no reason given",
         )
         raise TTSUnavailable("Speech service rejected the API key")
     if response.status_code == 402:
@@ -177,6 +196,7 @@ async def synthesize(text: str, voice_id: str | None = None) -> tuple[bytes, boo
         )
         raise TTSUnavailable("Speech voice is not available on this plan")
     if response.status_code == 429:
+        globals()["_quota_exhausted"] = True
         logger.warning("ElevenLabs quota exhausted")
         raise TTSUnavailable("Speech quota exhausted for now")
     if response.status_code >= 400:
@@ -198,9 +218,10 @@ async def synthesize(text: str, voice_id: str | None = None) -> tuple[bytes, boo
         raise TTSUnavailable("Speech service returned no audio")
 
     # Proof the key works again, so a rotation takes effect without a restart.
-    if _key_rejected:
+    if _key_rejected or _quota_exhausted:
         globals()["_key_rejected"] = False
-        logger.info("ElevenLabs accepted the API key again")
+        globals()["_quota_exhausted"] = False
+        logger.info("ElevenLabs is answering again")
 
     _cache_put(key, audio)
     return audio, False

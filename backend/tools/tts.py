@@ -37,8 +37,28 @@ class TTSUnavailable(RuntimeError):
     """Speech could not be synthesized; the caller should fall back."""
 
 
+# Set when ElevenLabs itself refuses the key. A 401 is sticky — it will not
+# come right on the next request — so remembering it lets /api/health say the
+# voice is unavailable instead of reporting "configured" for a key that has been
+# revoked. A later success clears it, so rotating the key needs no restart.
+_key_rejected = False
+
+
 def is_configured() -> bool:
     return bool(ELEVENLABS_API_KEY)
+
+
+def runtime_status() -> tuple[bool, str]:
+    """Whether high-quality speech can actually be produced, and if not, why.
+
+    Deliberately makes no API call. A key that is merely *present* tells you
+    nothing — this reports what the service said the last time it was asked.
+    """
+    if not ELEVENLABS_API_KEY:
+        return False, "ELEVENLABS_API_KEY is not set"
+    if _key_rejected:
+        return False, "ElevenLabs rejected the API key — it may have been revoked or rotated"
+    return True, "ok"
 
 
 def _cache_key(text: str, voice_id: str) -> str:
@@ -103,7 +123,12 @@ async def synthesize(text: str, voice_id: str | None = None) -> tuple[bytes, boo
         raise TTSUnavailable(f"Speech service unreachable: {exc}")
 
     if response.status_code == 401:
-        logger.error("ElevenLabs rejected the API key")
+        global _key_rejected
+        _key_rejected = True
+        logger.error(
+            "ElevenLabs rejected the API key — replace ELEVENLABS_API_KEY. "
+            "Speech falls back to the browser voice until it is valid."
+        )
         raise TTSUnavailable("Speech service rejected the API key")
     if response.status_code == 402:
         # Free accounts may only use premade voices over the API.
@@ -123,6 +148,11 @@ async def synthesize(text: str, voice_id: str | None = None) -> tuple[bytes, boo
     audio = response.content
     if not audio:
         raise TTSUnavailable("Speech service returned no audio")
+
+    # Proof the key works again, so a rotation takes effect without a restart.
+    if _key_rejected:
+        globals()["_key_rejected"] = False
+        logger.info("ElevenLabs accepted the API key again")
 
     _cache_put(key, audio)
     return audio, False

@@ -1,6 +1,6 @@
 {
   "eval_name": "scope",
-  "timestamp": "2026-09-14T10:32:50+00:00",
+  "timestamp": "2026-09-15T20:00:34+00:00",
   "total_tests": 4,
   "passed": 4,
   "failed": 0,
@@ -13,7 +13,7 @@
       "turns": [
         "I want to buy a 3BHK in Koramangala under 1.5 crore"
       ],
-      "response_text": "I only have listings for rentals, not properties for sale. If you'd like to rent a 3BHK in Koramangala instead, I can certainly help with that\u2014what is your monthly budget?",
+      "response_text": "I only have listings for long-term rentals, not properties for sale. If you'd like to rent a 3BHK in Koramangala instead, I can certainly help with that\u2014what is your monthly budget?",
       "shortlist": [],
       "assertions": [
         {
@@ -44,7 +44,7 @@
       "turns": [
         "Do you have any properties for sale in HSR Layout?"
       ],
-      "response_text": "I only have listings for long-term rentals, not properties for sale. If you'd like to explore renting in HSR Layout instead, let me know your monthly budget and how many bedrooms you need, and I'll be happy to help you find something.",
+      "response_text": "I only have listings for long-term rentals, not properties for sale. If you'd like to explore renting in HSR Layout instead, let me know your monthly budget and how many bedrooms you need, and I'd be happy to help you find a home.",
       "shortlist": [],
       "assertions": [
         {
@@ -71,7 +71,7 @@
         "Show me 2BHKs in Koramangala under 35k",
         "What would it cost me to buy that one?"
       ],
-      "response_text": "I only have information on rentals, not properties for sale. If you'd like to stick with renting, I can help you find more options or arrange a visit for the ones we've found. What would you like to do?",
+      "response_text": "I only have information on rentals, not properties for sale. If you'd like to proceed with renting, I can help you book a site visit for either of these 2BHKs or find more options for you.",
       "shortlist": [
         "listing_001",
         "listing_002"
@@ -95,7 +95,7 @@
       "turns": [
         "Do you have anything in Whitefield?"
       ],
-      "response_text": "I only have rental listings in Koramangala, Indiranagar, and HSR Layout. If you'd like to look in any of those areas, let me know your monthly budget and how many bedrooms you need, and I'll be happy to help!",
+      "response_text": "I only have rental listings for Koramangala, Indiranagar, and HSR Layout. I can't help with Whitefield, but if you'd like to look in any of those three areas, I'd be happy to help you find a place. What's your monthly budget and how many bedrooms do you need?",
       "shortlist": [],
       "assertions": [
         {

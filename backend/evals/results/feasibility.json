@@ -1,6 +1,6 @@
 {
   "eval_name": "feasibility",
-  "timestamp": "2026-09-14T10:28:03+00:00",
+  "timestamp": "2026-09-15T19:59:59+00:00",
   "total_tests": 5,
   "passed": 5,
   "failed": 0,
@@ -14,7 +14,7 @@
         "listing_001",
         "listing_002"
       ],
-      "response_text": "I found two 2BHKs in Koramangala with parking under thirty-five thousand rupees. The most affordable is at Prestige Oasis for twenty-eight thousand, and there's also a fully-furnished option at Sobha Dream Acres for thirty-five thousand. Would you like to know more about either of these?",
+      "response_text": "I found two 2BHKs in Koramangala with parking under thirty-five thousand rupees. There is a semi-furnished unit at Prestige Oasis for twenty-eight thousand, and a fully-furnished one at Sobha Dream Acres for thirty-five thousand. Would you like to know more about either of these?",
       "assertions": [
         {
           "assertion": "all_within_budget<=35000",
@@ -56,7 +56,7 @@
         "listing_011",
         "listing_002"
       ],
-      "response_text": "I found two 2BHKs with a gym and swimming pool under thirty-five thousand rupees. There is one in HSR Layout at Purva Venezia for thirty-two thousand, and another in Koramangala at Sobha Dream Acres for thirty-five thousand. Would you like to know more about either of these?",
+      "response_text": "I found two 2BHKs with a gym and swimming pool under thirty-five thousand rupees. One is in HSR Layout for thirty-two thousand, and the other is in Koramangala for thirty-five thousand. Would you like to narrow these down by neighborhood or any other preference?",
       "assertions": [
         {
           "assertion": "all_within_budget<=35000",
@@ -95,7 +95,7 @@
         "listing_010",
         "listing_003"
       ],
-      "response_text": "I found four 1BHKs under twenty-two thousand rupees across HSR Layout, Koramangala, and Indiranagar. Prices range from fifteen thousand at Brigade Orchards in HSR Layout to twenty-two thousand for a fully furnished unit at Salarpuria Sattva in Koramangala. Would you like to know more about any of these?",
+      "response_text": "I found four 1BHKs under twenty-two thousand rupees. There's one in HSR Layout at Brigade Orchards for fifteen thousand, two in Koramangala\u2014Mantri Residency for eighteen thousand and Salarpuria Sattva for twenty-two thousand\u2014and one in Indiranagar at Gopalan Grandeur for twenty thousand. Would you like to narrow these down?",
       "assertions": [
         {
           "assertion": "all_within_budget<=22000",
@@ -124,7 +124,7 @@
       "description": "Impossible combination must return nothing, not a near-miss",
       "passed": true,
       "shortlist": [],
-      "response_text": "I couldn't find any fully furnished 3BHKs in Indiranagar under twenty thousand rupees. That budget is quite tight for a 3BHK in that area. Would you like to increase your budget, or perhaps consider a 2BHK instead?",
+      "response_text": "I couldn't find any fully furnished 3BHKs in Indiranagar under twenty thousand rupees. That's a very tight budget for a 3BHK in that area. Would you like to increase your budget, or perhaps consider an unfurnished place instead?",
       "assertions": [
         {
           "assertion": "empty_shortlist",
@@ -140,7 +140,7 @@
       "shortlist": [
         "listing_001"
       ],
-      "response_text": "I found one 2BHK in Koramangala within your budget. It's a semi-furnished unit at Prestige Oasis for twenty-eight thousand rupees, and it comes with parking, a gym, power backup, a lift, and security. Would you like to know more about it, or perhaps see what else is available in nearby areas?",
+      "response_text": "I found one 2BHK in Koramangala for twenty-eight thousand rupees: it's at Prestige Oasis, and it's semi-furnished with parking, a gym, and power backup. Would you like to see more details about this one, or perhaps add another option to compare?",
       "assertions": [
         {
           "assertion": "all_within_budget<=28000",

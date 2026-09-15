@@ -1,8 +1,8 @@
 {
   "eval_name": "edit_correctness",
-  "timestamp": "2026-09-14T10:30:07+00:00",
-  "total_tests": 5,
-  "passed": 5,
+  "timestamp": "2026-09-15T19:56:59+00:00",
+  "total_tests": 10,
+  "passed": 10,
   "failed": 0,
   "pass_rate": 1.0,
   "details": [
@@ -28,7 +28,17 @@
         ],
         "mutated": []
       },
-      "response_text": "I've updated your list, and now only the semi-furnished unit at Prestige Oasis remains, at twenty-eight thousand rupees. Would you like to see what's nearby, or perhaps book a visit?",
+      "dropped": [
+        {
+          "listing_id": "listing_002",
+          "society_name": "Sobha Dream Acres",
+          "neighborhood": "Koramangala",
+          "rent": 35000,
+          "bedrooms": 2,
+          "reason": "Rent 35,000 is above 30,000"
+        }
+      ],
+      "response_text": "Done. I've dropped the Sobha Dream Acres listing, as its rent of thirty-five thousand is above your thirty-thousand limit. You're left with the Prestige Oasis unit at twenty-eight thousand rupees.",
       "assertions": [
         {
           "assertion": "all_within_budget<=30000",
@@ -85,7 +95,49 @@
         ],
         "mutated": []
       },
-      "response_text": "I found two pet-friendly 2BHKs within your budget. There is Purva Venezia in HSR Layout for thirty-two thousand rupees, and Adarsh Palm Retreat in Indiranagar for forty thousand. Would you like to know more about either of these, or perhaps check what's nearby?",
+      "dropped": [
+        {
+          "listing_id": "listing_013",
+          "society_name": "SNN Raj Etternia",
+          "neighborhood": "HSR Layout",
+          "rent": 26000,
+          "bedrooms": 2,
+          "reason": "Not pet-friendly"
+        },
+        {
+          "listing_id": "listing_001",
+          "society_name": "Prestige Oasis",
+          "neighborhood": "Koramangala",
+          "rent": 28000,
+          "bedrooms": 2,
+          "reason": "Not pet-friendly"
+        },
+        {
+          "listing_id": "listing_008",
+          "society_name": "SNN Raj Serenity",
+          "neighborhood": "Indiranagar",
+          "rent": 30000,
+          "bedrooms": 2,
+          "reason": "Not pet-friendly"
+        },
+        {
+          "listing_id": "listing_002",
+          "society_name": "Sobha Dream Acres",
+          "neighborhood": "Koramangala",
+          "rent": 35000,
+          "bedrooms": 2,
+          "reason": "Not pet-friendly"
+        },
+        {
+          "listing_id": "listing_015",
+          "society_name": "Mantri Webcity",
+          "neighborhood": "HSR Layout",
+          "rent": 38000,
+          "bedrooms": 3,
+          "reason": "Not pet-friendly"
+        }
+      ],
+      "response_text": "I've narrowed the list down to the two pet-friendly options: Purva Venezia in HSR Layout for thirty-two thousand, and Adarsh Palm Retreat in Indiranagar for forty thousand. Would you like to know more about either of these?",
       "assertions": [
         {
           "assertion": "all_have_pet-friendly",
@@ -121,20 +173,12 @@
       "after": [
         "listing_001",
         "listing_002",
-        "listing_013",
-        "listing_008",
-        "listing_015",
-        "listing_012",
-        "listing_007"
+        "listing_013"
       ],
       "diff": {
         "removed": [],
         "added": [
-          "listing_007",
-          "listing_008",
-          "listing_012",
-          "listing_013",
-          "listing_015"
+          "listing_013"
         ],
         "kept": [
           "listing_001",
@@ -142,7 +186,8 @@
         ],
         "mutated": []
       },
-      "response_text": "I've added two more 2BHK options with balconies to your list. There's a semi-furnished unit at SNN Raj Etternia in HSR Layout for twenty-six thousand, and another at SNN Raj Serenity in Indiranagar for thirty thousand. Would you like to see details for any of these?",
+      "dropped": [],
+      "response_text": "I've added one more option with a balcony for you. It's a 2BHK in HSR Layout at SNN Raj Etternia, available for twenty-six thousand rupees.",
       "assertions": [
         {
           "assertion": "previous_listings_preserved",
@@ -150,25 +195,17 @@
           "wrongly_removed": []
         },
         {
-          "assertion": "has_new_additions>=1",
+          "assertion": "has_new_additions:1-1",
           "passed": true,
           "added": [
-            "listing_007",
-            "listing_008",
-            "listing_012",
-            "listing_013",
-            "listing_015"
+            "listing_013"
           ]
         },
         {
           "assertion": "new_listings_have_balcony",
           "passed": true,
           "added": [
-            "listing_007",
-            "listing_008",
-            "listing_012",
-            "listing_013",
-            "listing_015"
+            "listing_013"
           ],
           "without_amenity": []
         }
@@ -203,7 +240,57 @@
         ],
         "mutated": []
       },
-      "response_text": "I've narrowed it down to two fully-furnished 2BHKs under thirty-five thousand rupees. You have Purva Venezia in HSR Layout for thirty-two thousand, and Sobha Dream Acres in Koramangala for thirty-five thousand. Would you like to see what's nearby either of these?",
+      "dropped": [
+        {
+          "listing_id": "listing_015",
+          "society_name": "Mantri Webcity",
+          "neighborhood": "HSR Layout",
+          "rent": 38000,
+          "bedrooms": 3,
+          "reason": "Rent 38,000 is above 35,000"
+        },
+        {
+          "listing_id": "listing_006",
+          "society_name": "Adarsh Palm Retreat",
+          "neighborhood": "Indiranagar",
+          "rent": 40000,
+          "bedrooms": 2,
+          "reason": "Rent 40,000 is above 35,000"
+        },
+        {
+          "listing_id": "listing_004",
+          "society_name": "Brigade Millennium",
+          "neighborhood": "Koramangala",
+          "rent": 45000,
+          "bedrooms": 3,
+          "reason": "Rent 45,000 is above 35,000"
+        },
+        {
+          "listing_id": "listing_013",
+          "society_name": "SNN Raj Etternia",
+          "neighborhood": "HSR Layout",
+          "rent": 26000,
+          "bedrooms": 2,
+          "reason": "Semi-furnished \u2014 you asked for fully-furnished only"
+        },
+        {
+          "listing_id": "listing_001",
+          "society_name": "Prestige Oasis",
+          "neighborhood": "Koramangala",
+          "rent": 28000,
+          "bedrooms": 2,
+          "reason": "Semi-furnished \u2014 you asked for fully-furnished only"
+        },
+        {
+          "listing_id": "listing_008",
+          "society_name": "SNN Raj Serenity",
+          "neighborhood": "Indiranagar",
+          "rent": 30000,
+          "bedrooms": 2,
+          "reason": "Semi-furnished \u2014 you asked for fully-furnished only"
+        }
+      ],
+      "response_text": "I've dropped the semi-furnished listings, so you're left with two fully-furnished options: Purva Venezia in HSR Layout and Sobha Dream Acres in Koramangala. Would you like to know more about either of these?",
       "assertions": [
         {
           "assertion": "all_within_budget<=35000",
@@ -246,7 +333,8 @@
         ],
         "mutated": []
       },
-      "response_text": "I've checked again, and SNN Raj Etternia is the only 2BHK in HSR Layout under thirty-five thousand that currently has a balcony. Would you like to see options in other neighborhoods, or perhaps adjust your budget to see if more become available?",
+      "dropped": [],
+      "response_text": "The one I found at SNN Raj Etternia already has a balcony, so you're all set. Would you like to see more options, or are you interested in booking a visit for this one?",
       "assertions": [
         {
           "assertion": "shortlist_identical",
@@ -262,6 +350,443 @@
           "assertion": "all_have_balcony",
           "passed": true,
           "missing": []
+        }
+      ]
+    },
+    {
+      "test_id": "edit_006",
+      "description": "Dropping one bedroom count keeps the others \u2014 no minimum can express it",
+      "edit_command": "Drop the 2BHK options",
+      "passed": true,
+      "before": [
+        "listing_005",
+        "listing_003",
+        "listing_001",
+        "listing_002"
+      ],
+      "after": [
+        "listing_005",
+        "listing_003"
+      ],
+      "diff": {
+        "removed": [
+          "listing_001",
+          "listing_002"
+        ],
+        "added": [],
+        "kept": [
+          "listing_003",
+          "listing_005"
+        ],
+        "mutated": []
+      },
+      "dropped": [
+        {
+          "listing_id": "listing_001",
+          "society_name": "Prestige Oasis",
+          "neighborhood": "Koramangala",
+          "rent": 28000,
+          "bedrooms": 2,
+          "reason": "2BHK \u2014 you asked to drop 2BHKs"
+        },
+        {
+          "listing_id": "listing_002",
+          "society_name": "Sobha Dream Acres",
+          "neighborhood": "Koramangala",
+          "rent": 35000,
+          "bedrooms": 2,
+          "reason": "2BHK \u2014 you asked to drop 2BHKs"
+        }
+      ],
+      "response_text": "Done \u2014 I've dropped the 2BHK options, so now you're just looking at the two 1BHKs in Koramangala. Would you like to see more details for either of these, or perhaps check what's nearby?",
+      "assertions": [
+        {
+          "assertion": "none_with_2BHK",
+          "passed": true,
+          "still_listed": []
+        },
+        {
+          "assertion": "no_unintended_removals",
+          "passed": true,
+          "wrongly_removed": []
+        },
+        {
+          "assertion": "no_new_additions",
+          "passed": true,
+          "added": []
+        },
+        {
+          "assertion": "survivors_unchanged",
+          "passed": true,
+          "mutated": []
+        },
+        {
+          "assertion": "removals_have_reasons",
+          "passed": true,
+          "unexplained": []
+        }
+      ]
+    },
+    {
+      "test_id": "edit_007",
+      "description": "Narrowing on a field no search parameter covers (floor area)",
+      "edit_command": "Drop anything smaller than 1100 square feet",
+      "passed": true,
+      "before": [
+        "listing_013",
+        "listing_001",
+        "listing_008",
+        "listing_011",
+        "listing_002",
+        "listing_015",
+        "listing_006",
+        "listing_004"
+      ],
+      "after": [
+        "listing_001",
+        "listing_011",
+        "listing_002",
+        "listing_015",
+        "listing_006",
+        "listing_004"
+      ],
+      "diff": {
+        "removed": [
+          "listing_008",
+          "listing_013"
+        ],
+        "added": [],
+        "kept": [
+          "listing_001",
+          "listing_002",
+          "listing_004",
+          "listing_006",
+          "listing_011",
+          "listing_015"
+        ],
+        "mutated": []
+      },
+      "dropped": [
+        {
+          "listing_id": "listing_013",
+          "society_name": "SNN Raj Etternia",
+          "neighborhood": "HSR Layout",
+          "rent": 26000,
+          "bedrooms": 2,
+          "reason": "1000 sqft is smaller than 1100 sqft"
+        },
+        {
+          "listing_id": "listing_008",
+          "society_name": "SNN Raj Serenity",
+          "neighborhood": "Indiranagar",
+          "rent": 30000,
+          "bedrooms": 2,
+          "reason": "1050 sqft is smaller than 1100 sqft"
+        }
+      ],
+      "response_text": "I've dropped SNN Raj Etternia and SNN Raj Serenity, as both are under 1100 square feet. You now have six options remaining, ranging from 1100 to 1600 square feet.",
+      "assertions": [
+        {
+          "assertion": "all_min_sqft>=1100",
+          "passed": true,
+          "too_small": []
+        },
+        {
+          "assertion": "no_unintended_removals",
+          "passed": true,
+          "wrongly_removed": []
+        },
+        {
+          "assertion": "no_new_additions",
+          "passed": true,
+          "added": []
+        },
+        {
+          "assertion": "survivors_unchanged",
+          "passed": true,
+          "mutated": []
+        },
+        {
+          "assertion": "removals_have_reasons",
+          "passed": true,
+          "unexplained": []
+        }
+      ]
+    },
+    {
+      "test_id": "edit_008",
+      "description": "Dropping one listing by name removes exactly that listing",
+      "edit_command": "Drop Prestige Oasis",
+      "passed": true,
+      "before": [
+        "listing_001",
+        "listing_002"
+      ],
+      "after": [
+        "listing_002"
+      ],
+      "diff": {
+        "removed": [
+          "listing_001"
+        ],
+        "added": [],
+        "kept": [
+          "listing_002"
+        ],
+        "mutated": []
+      },
+      "dropped": [
+        {
+          "listing_id": "listing_001",
+          "society_name": "Prestige Oasis",
+          "neighborhood": "Koramangala",
+          "rent": 28000,
+          "bedrooms": 2,
+          "reason": "User requested to drop"
+        }
+      ],
+      "response_text": "Done \u2014 I've dropped Prestige Oasis from your shortlist. You're now looking at just the Sobha Dream Acres unit, which is a fully-furnished 2BHK for thirty-five thousand rupees.",
+      "assertions": [
+        {
+          "assertion": "removed_exactly",
+          "passed": true,
+          "expected": [
+            "listing_001"
+          ],
+          "removed": [
+            "listing_001"
+          ]
+        },
+        {
+          "assertion": "no_new_additions",
+          "passed": true,
+          "added": []
+        },
+        {
+          "assertion": "survivors_unchanged",
+          "passed": true,
+          "mutated": []
+        },
+        {
+          "assertion": "removals_have_reasons",
+          "passed": true,
+          "unexplained": []
+        }
+      ]
+    },
+    {
+      "test_id": "edit_009",
+      "description": "A later edit must not bring back a listing the user already dropped",
+      "edit_command": "Now drop anything above 35k",
+      "passed": true,
+      "before": [
+        "listing_013",
+        "listing_008",
+        "listing_011",
+        "listing_002",
+        "listing_015",
+        "listing_006",
+        "listing_004"
+      ],
+      "after": [
+        "listing_013",
+        "listing_008",
+        "listing_011",
+        "listing_002"
+      ],
+      "diff": {
+        "removed": [
+          "listing_004",
+          "listing_006",
+          "listing_015"
+        ],
+        "added": [],
+        "kept": [
+          "listing_002",
+          "listing_008",
+          "listing_011",
+          "listing_013"
+        ],
+        "mutated": []
+      },
+      "dropped": [
+        {
+          "listing_id": "listing_001",
+          "society_name": "Prestige Oasis",
+          "neighborhood": "Koramangala",
+          "rent": 28000,
+          "bedrooms": 2,
+          "reason": "User requested to drop Prestige Oasis"
+        },
+        {
+          "listing_id": "listing_015",
+          "society_name": "Mantri Webcity",
+          "neighborhood": "HSR Layout",
+          "rent": 38000,
+          "bedrooms": 3,
+          "reason": "Rent 38,000 is above 35,000"
+        },
+        {
+          "listing_id": "listing_006",
+          "society_name": "Adarsh Palm Retreat",
+          "neighborhood": "Indiranagar",
+          "rent": 40000,
+          "bedrooms": 2,
+          "reason": "Rent 40,000 is above 35,000"
+        },
+        {
+          "listing_id": "listing_004",
+          "society_name": "Brigade Millennium",
+          "neighborhood": "Koramangala",
+          "rent": 45000,
+          "bedrooms": 3,
+          "reason": "Rent 45,000 is above 35,000"
+        }
+      ],
+      "response_text": "I've dropped Mantri Webcity, Adarsh Palm Retreat, and Brigade Millennium, as they were all priced above thirty-five thousand. You have four 2BHK options remaining on your list.",
+      "assertions": [
+        {
+          "assertion": "all_within_budget<=35000",
+          "passed": true,
+          "over_budget": []
+        },
+        {
+          "assertion": "dropped_listings_stay_dropped",
+          "passed": true,
+          "reappeared": []
+        },
+        {
+          "assertion": "no_unintended_removals",
+          "passed": true,
+          "wrongly_removed": []
+        },
+        {
+          "assertion": "no_new_additions",
+          "passed": true,
+          "added": []
+        },
+        {
+          "assertion": "survivors_unchanged",
+          "passed": true,
+          "mutated": []
+        }
+      ]
+    },
+    {
+      "test_id": "edit_010",
+      "description": "Narrowing on data that has to be fetched first (metro distance from OpenStreetMap)",
+      "edit_command": "Only show me places within 15 minutes of a metro station",
+      "passed": true,
+      "before": [
+        "listing_013",
+        "listing_001",
+        "listing_008",
+        "listing_011",
+        "listing_002",
+        "listing_006"
+      ],
+      "after": [
+        "listing_008",
+        "listing_006"
+      ],
+      "diff": {
+        "removed": [
+          "listing_001",
+          "listing_002",
+          "listing_011",
+          "listing_013"
+        ],
+        "added": [],
+        "kept": [
+          "listing_006",
+          "listing_008"
+        ],
+        "mutated": []
+      },
+      "dropped": [
+        {
+          "listing_id": "listing_015",
+          "society_name": "Mantri Webcity",
+          "neighborhood": "HSR Layout",
+          "rent": 38000,
+          "bedrooms": 3,
+          "reason": "3BHK \u2014 you asked for 2BHKs"
+        },
+        {
+          "listing_id": "listing_004",
+          "society_name": "Brigade Millennium",
+          "neighborhood": "Koramangala",
+          "rent": 45000,
+          "bedrooms": 3,
+          "reason": "3BHK \u2014 you asked for 2BHKs"
+        },
+        {
+          "listing_id": "listing_013",
+          "society_name": "SNN Raj Etternia",
+          "neighborhood": "HSR Layout",
+          "rent": 26000,
+          "bedrooms": 2,
+          "reason": "No metro station within 1.2 km (15-minute walk)"
+        },
+        {
+          "listing_id": "listing_001",
+          "society_name": "Prestige Oasis",
+          "neighborhood": "Koramangala",
+          "rent": 28000,
+          "bedrooms": 2,
+          "reason": "No metro station within 1.2 km (15-minute walk)"
+        },
+        {
+          "listing_id": "listing_011",
+          "society_name": "Purva Venezia",
+          "neighborhood": "HSR Layout",
+          "rent": 32000,
+          "bedrooms": 2,
+          "reason": "No metro station within 1.2 km (15-minute walk)"
+        },
+        {
+          "listing_id": "listing_002",
+          "society_name": "Sobha Dream Acres",
+          "neighborhood": "Koramangala",
+          "rent": 35000,
+          "bedrooms": 2,
+          "reason": "No metro station within 1.2 km (15-minute walk)"
+        }
+      ],
+      "response_text": "I've narrowed the list to two options. SNN Raj Serenity is within walking distance of the Indiranagar metro station. I couldn't check the metro distance for Adarsh Palm Retreat due to a data error, so I've kept it on the list for you to consider.",
+      "assertions": [
+        {
+          "assertion": "has_removals>=1",
+          "passed": true,
+          "removed": [
+            "listing_001",
+            "listing_002",
+            "listing_011",
+            "listing_013"
+          ]
+        },
+        {
+          "assertion": "kept_within_1.5km_of_metro",
+          "passed": true,
+          "too_far": [],
+          "unverified": [
+            "listing_006"
+          ]
+        },
+        {
+          "assertion": "no_new_additions",
+          "passed": true,
+          "added": []
+        },
+        {
+          "assertion": "survivors_unchanged",
+          "passed": true,
+          "mutated": []
+        },
+        {
+          "assertion": "removals_have_reasons",
+          "passed": true,
+          "unexplained": []
         }
       ]
     }

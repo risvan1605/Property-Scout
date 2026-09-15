@@ -1,6 +1,6 @@
 {
   "eval_name": "grounding",
-  "timestamp": "2026-09-14T10:32:35+00:00",
+  "timestamp": "2026-09-15T12:59:27+00:00",
   "total_tests": 5,
   "passed": 5,
   "failed": 0,
@@ -16,71 +16,71 @@
       "test_id": "grounding_001",
       "description": "General 'what is it like to live there' explanation",
       "passed": true,
-      "response_text": "Koramangala is a vibrant startup hub with a youthful energy, packed with cafes, restaurants, and nightlife, especially in the 5th and 6th blocks. If you prefer something quieter, the 1st and 3rd blocks are more residential and family-friendly. It's generally safe and very well-connected.",
+      "response_text": "Koramangala is a vibrant, youthful hub known as the startup center of Bengaluru. It has a great mix of lively commercial areas with tons of cafes and nightlife, alongside quieter, family-friendly residential blocks. It is generally considered safe, with plenty of amenities and a very cosmopolitan feel.",
       "shortlist": [
         "listing_001",
         "listing_002"
       ],
       "claims": [
         {
-          "claim": "Koramangala is a vibrant startup hub with a youthful energy",
+          "claim": "known as the startup center of Bengaluru",
           "type": "character",
           "neighborhood": "Koramangala",
           "grounded": true,
           "searched": "Koramangala",
           "verdict": "SUPPORTED",
-          "supporting_quote": "Koramangala is known for its vibrant, youthful energy. It is often called the \"startup hub\" of Bengaluru, hosting offices and co-working spaces for hundreds of startups and tech companies.",
-          "top_similarity": 0.8978,
+          "supporting_quote": "It is often called the \"startup hub\" of Bengaluru",
+          "top_similarity": 0.7189,
           "source_url": "https://en.wikipedia.org/wiki/Koramangala",
           "section": "Character & Vibe"
         },
         {
-          "claim": "packed with cafes, restaurants, and nightlife, especially in the 5th and 6th blocks",
+          "claim": "has a mix of lively commercial areas with tons of cafes and nightlife",
           "type": "amenity",
-          "neighborhood": "Koramangala 5th and 6th blocks",
+          "neighborhood": "Koramangala",
           "grounded": true,
-          "searched": "all areas (fell back from 'Koramangala 5th and 6th blocks')",
+          "searched": "Koramangala",
           "verdict": "SUPPORTED",
           "supporting_quote": "The 5th and 6th Blocks are the commercial heart, lined with restaurants, cafes, boutique shops, and pubs.",
-          "top_similarity": 0.6628,
+          "top_similarity": 0.6473,
           "source_url": "https://en.wikipedia.org/wiki/Koramangala",
           "section": "Character & Vibe"
         },
         {
-          "claim": "the 1st and 3rd blocks are more residential and family-friendly",
+          "claim": "has quieter, family-friendly residential blocks",
           "type": "character",
-          "neighborhood": "Koramangala 1st and 3rd blocks",
+          "neighborhood": "Koramangala",
           "grounded": true,
-          "searched": "all areas (fell back from 'Koramangala 1st and 3rd blocks')",
+          "searched": "Koramangala",
           "verdict": "SUPPORTED",
           "supporting_quote": "The 1st and 3rd Blocks are quieter and considered particularly safe for families",
-          "top_similarity": 0.6461,
+          "top_similarity": 0.6529,
           "source_url": "https://en.wikipedia.org/wiki/Koramangala",
           "section": "Safety"
         },
         {
-          "claim": "It's generally safe",
+          "claim": "generally considered safe",
           "type": "safety",
           "neighborhood": "Koramangala",
           "grounded": true,
           "searched": "Koramangala",
           "verdict": "SUPPORTED",
           "supporting_quote": "Koramangala is generally considered a safe neighborhood",
-          "top_similarity": 0.6471,
+          "top_similarity": 0.5746,
           "source_url": "https://en.wikipedia.org/wiki/Koramangala",
           "section": "Safety"
         },
         {
-          "claim": "very well-connected",
-          "type": "transit",
+          "claim": "has a very cosmopolitan feel",
+          "type": "character",
           "neighborhood": "Koramangala",
           "grounded": true,
           "searched": "Koramangala",
           "verdict": "SUPPORTED",
-          "supporting_quote": "Koramangala has good connectivity to the rest of Bengaluru",
-          "top_similarity": 0.5517,
+          "supporting_quote": "The area has a cosmopolitan feel with a diverse mix of young professionals, entrepreneurs, students (IIM Bangalore is located here), and established families.",
+          "top_similarity": 0.6043,
           "source_url": "https://en.wikipedia.org/wiki/Koramangala",
-          "section": "Transit & Connectivity"
+          "section": "Character & Vibe"
         }
       ],
       "listing_checks": [
@@ -125,7 +125,7 @@
       "test_id": "grounding_002",
       "description": "Safety question \u2014 claims must come from the Safety section",
       "passed": true,
-      "response_text": "HSR Layout is widely considered one of the safest neighborhoods in Bengaluru. It has well-lit main roads, active resident welfare associations, and a strong sense of community, making it very safe for families and solo residents to walk around at night.",
+      "response_text": "HSR Layout is widely considered one of the safest neighborhoods in Bengaluru. It has well-lit roads, active resident associations, and a quiet, family-friendly atmosphere that makes evening walks quite comfortable.",
       "shortlist": [
         "listing_013",
         "listing_011"
@@ -144,38 +144,38 @@
           "section": "Safety"
         },
         {
-          "claim": "It has well-lit main roads",
+          "claim": "It has well-lit roads",
           "type": "safety",
           "neighborhood": "HSR Layout",
           "grounded": true,
           "searched": "HSR Layout",
           "verdict": "SUPPORTED",
           "supporting_quote": "Well-lit main roads and park areas",
-          "top_similarity": 0.6252,
+          "top_similarity": 0.629,
           "source_url": "https://en.wikipedia.org/wiki/HSR_Layout",
           "section": "Safety"
         },
         {
-          "claim": "It has active resident welfare associations",
-          "type": "safety",
-          "neighborhood": "HSR Layout",
-          "grounded": true,
-          "searched": "HSR Layout",
-          "verdict": "SUPPORTED",
-          "supporting_quote": "Active resident welfare associations in every sector \u2014 regular neighborhood watch and security patrols",
-          "top_similarity": 0.6342,
-          "source_url": "https://en.wikipedia.org/wiki/HSR_Layout",
-          "section": "Safety"
-        },
-        {
-          "claim": "It has a strong sense of community",
+          "claim": "It has active resident associations",
           "type": "character",
           "neighborhood": "HSR Layout",
           "grounded": true,
           "searched": "HSR Layout",
           "verdict": "SUPPORTED",
-          "supporting_quote": "Strong community bonds \u2014 neighbors know each other, which provides natural social surveillance",
-          "top_similarity": 0.5984,
+          "supporting_quote": "Active resident welfare associations in every sector \u2014 regular neighborhood watch and security patrols",
+          "top_similarity": 0.5961,
+          "source_url": "https://en.wikipedia.org/wiki/HSR_Layout",
+          "section": "Character & Vibe"
+        },
+        {
+          "claim": "It has a quiet, family-friendly atmosphere",
+          "type": "character",
+          "neighborhood": "HSR Layout",
+          "grounded": true,
+          "searched": "HSR Layout",
+          "verdict": "SUPPORTED",
+          "supporting_quote": "More residential and family-oriented compared to Koramangala and Indiranagar",
+          "top_similarity": 0.6415,
           "source_url": "https://en.wikipedia.org/wiki/HSR_Layout",
           "section": "Character & Vibe"
         }
@@ -222,7 +222,7 @@
       "test_id": "grounding_003",
       "description": "Area with no guide data \u2014 must admit the gap, invent nothing",
       "passed": true,
-      "response_text": "I only have rental data for Koramangala, Indiranagar, and HSR Layout, so I can't tell you about Whitefield. If you'd like to look in one of the areas I cover, what is your monthly budget and how many bedrooms do you need?",
+      "response_text": "I only have rental data for Koramangala, Indiranagar, and HSR Layout, so I cannot provide information on Whitefield. If you'd like to look for a home in one of the areas I cover, what is your monthly budget and how many bedrooms do you need?",
       "shortlist": [],
       "claims": [],
       "listing_checks": [],
@@ -246,7 +246,7 @@
         {
           "assertion": "admits_missing_data",
           "passed": true,
-          "quote": "I only have rental data for Koramangala, Indiranagar, and HSR Layout, so I can't tell you about Whitefield."
+          "quote": "I only have rental data for Koramangala, Indiranagar, and HSR Layout, so I cannot provide information on Whitefield."
         }
       ]
     },
@@ -297,33 +297,33 @@
       "test_id": "grounding_005",
       "description": "Detail finer than the corpus holds \u2014 answer what is known, flag what is not",
       "passed": true,
-      "response_text": "Indiranagar is a major nightlife hub, often compared to Koramangala, with a dense concentration of pubs, bars, and live music venues along 100 Feet Road and 12th Main. It has a polished, upscale vibe with many cocktail bars and rooftop spots. As for crime figures for that specific block, my neighborhood data doesn't go to that level of detail.",
+      "response_text": "Indiranagar is a major nightlife hub, with a dense concentration of pubs, bars, and live music venues, especially along 100 Feet Road and 12th Main. It has a very upscale, cosmopolitan vibe. As for crime statistics for that specific block, my neighborhood data doesn't go to that level of detail.",
       "shortlist": [
         "listing_008",
         "listing_006"
       ],
       "claims": [
         {
-          "claim": "Indiranagar is a major nightlife hub with a dense concentration of pubs, bars, and live music venues along 100 Feet Road and 12th Main",
+          "claim": "Indiranagar is a major nightlife hub, with a dense concentration of pubs, bars, and live music venues, especially along 100 Feet Road and 12th Main.",
           "type": "amenity",
           "neighborhood": "Indiranagar",
           "grounded": true,
           "searched": "Indiranagar",
           "verdict": "SUPPORTED",
-          "supporting_quote": "Dense concentration of pubs and bars along 12th Main and 100 Feet Road",
-          "top_similarity": 0.8838,
+          "supporting_quote": "Dense concentration of pubs and bars along 12th Main and 100 Feet Road... Live music venues and comedy clubs operate several nights a week",
+          "top_similarity": 0.8822,
           "source_url": "https://en.wikipedia.org/wiki/Indiranagar,_Bengaluru",
           "section": "Nightlife & Entertainment"
         },
         {
-          "claim": "Indiranagar has a polished, upscale vibe with many cocktail bars and rooftop spots",
+          "claim": "It has a very upscale, cosmopolitan vibe.",
           "type": "character",
           "neighborhood": "Indiranagar",
           "grounded": true,
           "searched": "Indiranagar",
           "verdict": "SUPPORTED",
-          "supporting_quote": "The neighborhood has a polished, cosmopolitan atmosphere that appeals to professionals and expats... The area has a more upscale nightlife vibe compared to Koramangala \u2014 cocktail bars and wine lounges... Several rooftop bars with skyline views",
-          "top_similarity": 0.8211,
+          "supporting_quote": "The neighborhood has a polished, cosmopolitan atmosphere that appeals to professionals and expats",
+          "top_similarity": 0.6427,
           "source_url": "https://en.wikipedia.org/wiki/Indiranagar,_Bengaluru",
           "section": "Character & Vibe"
         }
@@ -367,7 +367,7 @@
         {
           "assertion": "admits_missing_data",
           "passed": true,
-          "quote": "As for crime figures for that specific block, my neighborhood data doesn't go to that level of detail."
+          "quote": "As for crime statistics for that specific block, my neighborhood data doesn't go to that level of detail."
         }
       ]
     }

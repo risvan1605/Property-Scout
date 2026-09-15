@@ -48,6 +48,7 @@ def get_session(session_id: str) -> dict:
         "preferences": vars(session.preferences),
         "shortlist": session.shortlist,
         "sources": session.sources,
+        "dropped": session.dropped,
         "booking": vars(session.booking) if session.booking else None,
         "history": [{"role": m.role, "text": m.text} for m in session.conversation_history],
     }

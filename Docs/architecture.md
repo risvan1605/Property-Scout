@@ -225,7 +225,16 @@ tools = [
             "min_bedrooms": "int — minimum bedrooms (1, 2, 3)",
             "neighborhood": "str — area name (e.g. Koramangala)",
             "amenities": "list[str] — required amenities (parking, balcony, gym, etc.)",
-            "exclude_ids": "list[str] — listing IDs to exclude from results"
+            "exclude_ids": "list[str] — listing IDs to exclude from results",
+            "mode": "replace (new search) | append (add to what's on screen)",
+            "limit": "int — at most this many results ('add one more' = 1)"
+        }
+    },
+    {
+        "name": "update_shortlist",
+        "description": "Narrow the on-screen shortlist on ANY criterion by removing listings by ID",
+        "parameters": {
+            "remove": "list[{listing_id: str, reason: str}] — only on-screen IDs accepted; reasons shown in the UI"
         }
     },
     {

@@ -8,6 +8,11 @@ plus a structured shortlist out.
 The shortlist the UI renders is built from tool results, never parsed out of
 the model's prose — so a listing can only reach the screen if the database
 actually returned it.
+
+Finding and narrowing are separate. `search_listings` finds listings (a new
+search, or more to add). `update_shortlist` narrows what is already on screen
+by listing ID, so an edit on any criterion — a field the search has no
+parameter for, or data fetched from OpenStreetMap — needs no new filter code.
 """
 
 import asyncio
@@ -180,7 +185,9 @@ class Orchestrator:
         turn["tool_calls"].append({"name": name, "args": args})
 
         if name == "search_listings":
-            return self._tool_search_listings(args, turn)
+            return self._tool_search_listings(args, turn, session)
+        if name == "update_shortlist":
+            return self._tool_update_shortlist(args, turn, session)
         if name == "query_openstreetmap":
             return await self._tool_query_osm(args, turn)
         if name == "retrieve_neighborhood_info":
@@ -192,7 +199,7 @@ class Orchestrator:
 
         return {"error": f"Unknown tool '{name}'."}
 
-    def _tool_search_listings(self, args: dict, turn: dict) -> dict:
+    def _tool_search_listings(self, args: dict, turn: dict, session=None) -> dict:
         listings = listing_search.search_listings(
             max_budget=args.get("max_budget"),
             min_bedrooms=args.get("min_bedrooms"),
@@ -201,14 +208,43 @@ class Orchestrator:
             exclude_ids=args.get("exclude_ids"),
             furnishing=args.get("furnishing"),
         )
+        mode = (args.get("mode") or "replace").lower()
+        on_screen = [l["id"] for l in session.shortlist] if session else []
+        dropped_ids = {d["listing_id"] for d in session.dropped} if session else set()
+
+        if mode == "append":
+            # Adding never repeats a card on screen or revives one the user dropped.
+            listings = [
+                l for l in listings if l["id"] not in on_screen and l["id"] not in dropped_ids
+            ]
+        limit = args.get("limit")
+        if limit:
+            listings = listings[: max(int(limit), 0)]
+
         turn["search_args"] = args
-        turn["search_mode"] = (args.get("mode") or "replace").lower()
+        turn["search_mode"] = mode
         turn["search_results"] = listings
+        if mode != "append":
+            turn["removed"] = {}  # a fresh result set supersedes earlier removals
+
+        found = [l["id"] for l in listings]
+        effect: dict[str, Any] = {
+            "added_ids": [i for i in found if i not in on_screen],
+            "removed_ids": [] if mode == "append" else [i for i in on_screen if i not in found],
+        }
+        revived = sorted(dropped_ids & set(found))
+        if revived:
+            effect["previously_dropped_ids"] = revived
+            effect["note"] = (
+                "These results bring back listings the user dropped earlier. Unless "
+                "they asked to see those again, search again with them in exclude_ids."
+            )
 
         payload: dict[str, Any] = {
             "count": len(listings),
             "listings": listings,
             "filters_applied": {k: v for k, v in args.items() if v not in (None, [], "")},
+            "shortlist_effect": effect,
         }
         if not listings:
             # Give the model the facts it needs to suggest a specific relaxation
@@ -222,6 +258,41 @@ class Orchestrator:
                     "neighborhoods": sorted({x["neighborhood"] for x in everything}),
                 }
         return payload
+
+    def _tool_update_shortlist(self, args: dict, turn: dict, session=None) -> dict:
+        """Drop listings from the shortlist by ID, each with the reason it failed.
+
+        The model judges which listings fail the user's criterion; this only
+        guarantees the edit is real and contained — IDs must be on screen, every
+        removal carries a reason, and nothing else on screen changes.
+        """
+        on_screen = _pending_shortlist_ids(session, turn)
+        accepted, not_on_screen, missing_reason = [], [], []
+        for item in args.get("remove") or []:
+            listing_id = str((item or {}).get("listing_id") or "").strip()
+            reason = str((item or {}).get("reason") or "").strip()
+            if listing_id not in on_screen:
+                not_on_screen.append(listing_id)
+            elif not reason:
+                missing_reason.append(listing_id)
+            else:
+                turn["removed"][listing_id] = reason
+                accepted.append(listing_id)
+
+        remaining = [i for i in on_screen if i not in turn["removed"]]
+        result: dict[str, Any] = {"removed_ids": accepted, "remaining_ids": remaining}
+        if not_on_screen:
+            result["not_on_screen"] = not_on_screen
+            result["note"] = (
+                "Those IDs are not on the user's screen, so nothing was removed for "
+                "them. Use IDs from the CURRENT SHORTLIST."
+            )
+        if missing_reason:
+            result["missing_reason"] = missing_reason
+            result["error"] = "Every removal needs a reason. Call again with one for these."
+        if not remaining:
+            result["shortlist_now_empty"] = True
+        return result
 
     async def _tool_query_osm(self, args: dict, turn: dict) -> dict:
         lat, lng = _resolve_lookup_point(args)
@@ -446,7 +517,7 @@ class Orchestrator:
         """Run one conversational turn and return the full API response payload."""
         turn: dict[str, Any] = {
             "tool_calls": [], "search_args": None, "search_mode": "replace",
-            "search_results": None,
+            "search_results": None, "removed": {},
             "rag_results": [], "poi_results": [], "snapshots": {},
             "booking": None, "pdf_sent_to": None,
         }
@@ -454,6 +525,7 @@ class Orchestrator:
         state_block = build_state_block(
             preferences=vars(session.preferences),
             shortlist=session.shortlist,
+            dropped=session.dropped,
             clarification_count=session.clarification_count,
             booking=vars(session.booking) if session.booking else None,
         )
@@ -517,6 +589,22 @@ class Orchestrator:
         elif turn["poi_results"]:
             _attach_pois_to_shortlist(session.shortlist, turn["poi_results"])
 
+        on_screen = {l["id"] for l in session.shortlist}
+        # A listing that is back on screen is no longer dropped.
+        session.dropped = [d for d in session.dropped if d["listing_id"] not in on_screen]
+        if turn["removed"]:
+            for listing in session.shortlist:
+                if listing["id"] in turn["removed"]:
+                    session.dropped.append({
+                        "listing_id": listing["id"],
+                        "society_name": listing.get("society_name"),
+                        "neighborhood": listing.get("neighborhood"),
+                        "rent": listing.get("rent"),
+                        "bedrooms": listing.get("bedrooms"),
+                        "reason": turn["removed"][listing["id"]],
+                    })
+            session.shortlist = [l for l in session.shortlist if l["id"] not in turn["removed"]]
+
         if turn["booking"]:
             session.booking = BookingSlot(
                 listing_id=turn["booking"].get("listing_id", ""),
@@ -530,7 +618,10 @@ class Orchestrator:
         _merge_sources(session, turn)
 
         # A question that produced no shortlist is a clarifying question.
-        if turn["search_results"] is None and "?" in response_text and not session.shortlist:
+        if (
+            turn["search_results"] is None and not turn["removed"]
+            and "?" in response_text and not session.shortlist
+        ):
             session.clarification_count += 1
 
         session.add_user_message(text)
@@ -545,6 +636,7 @@ class Orchestrator:
             "state": session.stage.value,
             "shortlist": session.shortlist,
             "sources": session.sources,
+            "dropped": session.dropped,
             "booking": vars(session.booking) if session.booking else None,
             "preferences": vars(session.preferences),
             **extra,
@@ -624,6 +716,17 @@ def _dedupe_pois(pois: list[dict]) -> list[dict]:
     return unique
 
 
+def _pending_shortlist_ids(session: Optional[ConversationState], turn: dict) -> list[str]:
+    """IDs on screen once this turn's search so far lands, before removals."""
+    current = [l["id"] for l in session.shortlist] if session else []
+    if turn["search_results"] is None:
+        return current
+    found = [l["id"] for l in turn["search_results"]]
+    if turn["search_mode"] == "append":
+        return current + [i for i in found if i not in current]
+    return found
+
+
 def _match_reasons(listing: dict, filters: dict) -> list[str]:
     """Why this listing matched — computed from the data, not from the model."""
     reasons = []
@@ -658,7 +761,12 @@ def _apply_preferences(session: ConversationState, filters: dict) -> None:
 
 
 def _attach_pois_to_shortlist(shortlist: list[dict], poi_results: list[dict]) -> None:
-    """Fold on-demand POI lookups into the matching listing card."""
+    """Fold on-demand POI lookups into the matching listing card.
+
+    A lookup for one type (just metro stations, say) is merged into what the card
+    already shows rather than replacing it, and a failed lookup never overwrites
+    data that came back earlier.
+    """
     for result in poi_results:
         for listing in shortlist:
             if (
@@ -666,7 +774,13 @@ def _attach_pois_to_shortlist(shortlist: list[dict], poi_results: list[dict]) ->
                 and round(listing["latitude"], 4) == round(result.get("lat", 0), 4)
                 and round(listing["longitude"], 4) == round(result.get("lng", 0), 4)
             ):
-                listing["nearby_pois"] = _poi_summary(result)
+                existing = listing.get("nearby_pois")
+                summary = _poi_summary(result)
+                if existing and not existing.get("error"):
+                    if summary.get("error"):
+                        continue
+                    summary = {**existing, **summary}
+                listing["nearby_pois"] = summary
 
 
 def _merge_sources(session: ConversationState, turn: dict) -> None:

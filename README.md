@@ -20,10 +20,10 @@ eval that fails the build if it doesn't.
 | Grounded neighborhood answers | RAG over three neighborhood guides in ChromaDB, with citations |
 | "What's nearby?" | OpenStreetMap **MCP** server over stdio (live Overpass data) |
 | Spoken replies | ElevenLabs, with the browser voice as fallback |
-| Voice shortlist edits | `search_listings` with replace/append modes |
+| Voice shortlist edits | `update_shortlist` narrows by listing ID on any criterion; `search_listings` finds and adds |
 | Site-visit booking | Google Calendar API + `.ics` invite by email |
 | Shortlist PDF | Jinja2 → WeasyPrint → Gmail SMTP |
-| AI evals | 4 suites, 19 tests, run against the real agent |
+| AI evals | 4 suites, 24 tests, run against the real agent |
 
 ---
 
@@ -41,6 +41,7 @@ FastAPI backend
   Orchestrator  ──  Gemini 3.1 Flash-Lite, function calling, max 5 tool calls/turn
         │
         ├─ search_listings ──────────→ SQLite (15 listings)
+        ├─ update_shortlist ─────────→ removes on-screen listings by ID, with reasons
         ├─ retrieve_neighborhood_info → ChromaDB (27 chunks, gemini-embedding-001)
         ├─ query_openstreetmap ──────→ MCP server (stdio) → Overpass API
         ├─ book_site_visit ──────────→ Google Calendar API
@@ -50,6 +51,16 @@ FastAPI backend
 The shortlist the UI renders is built from **tool results, never parsed from the
 model's prose** — a listing can only reach the screen if the database returned it.
 Match reasons are computed from the listing fields, not generated.
+
+**Editing the shortlist.** Finding and narrowing are separate tools. Narrowing
+("drop anything above 40k", "only near a metro", "drop Prestige Oasis") goes
+through `update_shortlist`: the model picks the on-screen listings that fail,
+each with a reason from its data, and the orchestrator applies exactly that —
+IDs must be on screen, nothing else changes, and dropped listings (with reasons)
+are shown in a "Dropped" list and never re-added unasked. So a new criterion
+needs no new filter code; when it needs data the card lacks, the model fetches
+it first (OpenStreetMap for metro distance) and then removes by ID. Adding
+("one more with a balcony") is `search_listings` in append mode with a `limit`.
 
 Full design notes: [`architecture.md`](Docs/architecture.md) ·
 [`implementation_plan.md`](Docs/implementation_plan.md) · [`edgecase.md`](Docs/edgecase.md) ·
@@ -189,7 +200,12 @@ which scores 12/12 on the calibration set. Reproduce with
 These evals earned their keep: they caught the agent replacing the shortlist when
 asked to *add* to it, and claiming "narrowed to two fully furnished" while five
 listings stayed on screen (the tool had no furnishing filter, so it filtered in
-prose). Both are fixed.
+prose). Both are fixed. A later run showed the deeper cause: every edit had to be
+a search parameter, so "drop the 2BHKs" from a mixed 1BHK/2BHK list re-ran the
+old search and the model announced a change that never reached the screen. That
+led to `update_shortlist`, and to edit cases on criteria no search parameter
+covers — floor area, a listing named outright, metro distance, and a dropped
+listing staying dropped through a later edit.
 
 ---
 

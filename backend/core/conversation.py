@@ -64,6 +64,8 @@ class ConversationState:
     clarification_count: int = 0
     booking: Optional[BookingSlot] = None
     sources: list[dict] = field(default_factory=list)
+    # Listings the user narrowed away, each with the reason it was dropped.
+    dropped: list[dict] = field(default_factory=list)
 
     def add_user_message(self, text: str):
         """Add a user message to conversation history."""

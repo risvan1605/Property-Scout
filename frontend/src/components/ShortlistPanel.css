@@ -58,6 +58,49 @@
 
 .shortlist__empty-hint em { color: var(--ink); font-style: italic; }
 
+/* Listings narrowed away, each with the reason the scout gave for dropping it. */
+.dropped {
+  margin-top: 22px;
+  border-top: 1px solid var(--edge);
+  padding-top: 12px;
+}
+
+.dropped__toggle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.dropped__toggle::-webkit-details-marker { display: none; }
+.dropped__toggle::after { content: "›"; color: var(--ink-dim); transition: transform 0.2s; }
+.dropped[open] .dropped__toggle::after { transform: rotate(90deg); }
+
+.dropped__count { font-size: 11px; color: var(--ink-mid); }
+
+.dropped__list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.dropped__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--absent);
+  color: var(--ink-mid);
+  font-size: 13px;
+}
+
+.dropped__name { color: var(--ink); text-decoration: line-through; text-decoration-color: var(--ink-dim); }
+.dropped__meta { font-size: 11px; color: var(--ink-dim); }
+.dropped__reason { grid-column: 1 / -1; }
+
 @media (max-width: 900px) {
   .shortlist { padding: 20px 16px 200px; }
   .shortlist__grid { grid-template-columns: 1fr; }

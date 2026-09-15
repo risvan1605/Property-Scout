@@ -96,6 +96,7 @@ class Turn:
     state: str
     booking: dict | None
     tool_calls: list[dict] = field(default_factory=list)
+    dropped: list[dict] = field(default_factory=list)
     error: str | None = None
 
     @property
@@ -148,6 +149,7 @@ async def _replay_async(turns: list[str], orchestrator: Orchestrator) -> list[Tu
                 state=payload.get("state", ""),
                 booking=payload.get("booking"),
                 tool_calls=payload.get("tool_calls", []),
+                dropped=payload.get("dropped", []),
                 error=payload.get("error"),
             )
         )

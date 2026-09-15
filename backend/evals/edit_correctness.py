@@ -21,6 +21,10 @@ def _should_survive(listing: dict, keep_if: dict) -> bool:
     """Would this listing still qualify after the stated edit?"""
     if "max_rent" in keep_if and listing["rent"] > keep_if["max_rent"]:
         return False
+    if "not_bedrooms" in keep_if and listing["bedrooms"] in keep_if["not_bedrooms"]:
+        return False
+    if "min_sqft" in keep_if and (listing.get("sqft") or 0) < keep_if["min_sqft"]:
+        return False
     if "has_amenities" in keep_if:
         required = {a.lower() for a in keep_if["has_amenities"]}
         if not required.issubset(_amenities(listing)):
@@ -46,7 +50,9 @@ def diff(before: list[dict], after: list[dict]) -> dict:
     }
 
 
-def check(spec: dict, before: list[dict], after: list[dict], changes: dict) -> dict:
+def check(
+    spec: dict, before: list[dict], after: list[dict], changes: dict, dropped: list[dict]
+) -> dict:
     kind = spec["type"]
 
     if kind == "all_within_budget":
@@ -58,6 +64,12 @@ def check(spec: dict, before: list[dict], after: list[dict], changes: dict) -> d
         required = {a.lower() for a in spec["amenities"]}
         missing = [l["id"] for l in after if not required.issubset(_amenities(l))]
         return assertion(f"all_have_{'+'.join(sorted(required))}", not missing, missing=missing)
+
+    if kind == "none_with_bedrooms":
+        sizes = set(spec["bedrooms"])
+        left = [l["id"] for l in after if l.get("bedrooms") in sizes]
+        label = "+".join(str(b) for b in sorted(sizes))
+        return assertion(f"none_with_{label}BHK", not left, still_listed=left)
 
     if kind == "all_furnishing":
         wanted = spec["furnishing"].lower()
@@ -81,9 +93,52 @@ def check(spec: dict, before: list[dict], after: list[dict], changes: dict) -> d
         return assertion("previous_listings_preserved", not lost, wrongly_removed=lost)
 
     if kind == "has_new_additions":
-        minimum = spec.get("min", 1)
+        minimum, maximum = spec.get("min", 1), spec.get("max")
         added = changes["added"]
-        return assertion(f"has_new_additions>={minimum}", len(added) >= minimum, added=added)
+        in_range = len(added) >= minimum and (maximum is None or len(added) <= maximum)
+        label = f"{minimum}-{maximum}" if maximum is not None else f">={minimum}"
+        return assertion(f"has_new_additions:{label}", in_range, added=added)
+
+    if kind == "has_removals":
+        minimum = spec.get("min", 1)
+        removed = changes["removed"]
+        return assertion(f"has_removals>={minimum}", len(removed) >= minimum, removed=removed)
+
+    if kind == "all_min_sqft":
+        floor = spec["sqft"]
+        small = [l["id"] for l in after if (l.get("sqft") or 0) < floor]
+        return assertion(f"all_min_sqft>={floor}", not small, too_small=small)
+
+    if kind == "removed_exactly":
+        expected = sorted(spec["ids"])
+        return assertion("removed_exactly", changes["removed"] == expected,
+                         expected=expected, removed=changes["removed"])
+
+    if kind == "not_listed":
+        back = [lid for lid in spec["ids"] if lid in {l["id"] for l in after}]
+        return assertion("dropped_listings_stay_dropped", not back, reappeared=back)
+
+    if kind == "removals_have_reasons":
+        reasons = {d["listing_id"]: (d.get("reason") or "").strip() for d in dropped}
+        unexplained = [lid for lid in changes["removed"] if not reasons.get(lid)]
+        return assertion("removals_have_reasons", not unexplained, unexplained=unexplained)
+
+    if kind == "kept_near_metro":
+        # Only listings whose metro lookup actually came back can be judged; one
+        # the agent couldn't check is rightly kept and said so, not failed here.
+        limit = spec["max_km"]
+        far, unverified = [], []
+        for listing in after:
+            pois = listing.get("nearby_pois") or {}
+            if pois.get("error") or "metro_stations" not in pois:
+                unverified.append(listing["id"])
+                continue
+            distances = [p.get("distance_km") for p in pois["metro_stations"]
+                         if p.get("distance_km") is not None]
+            if not distances or min(distances) > limit:
+                far.append(listing["id"])
+        return assertion(f"kept_within_{limit}km_of_metro", not far,
+                         too_far=far, unverified=unverified)
 
     if kind == "new_listings_have_amenity":
         amenity = spec["amenity"].lower()
@@ -116,7 +171,8 @@ def run(orchestrator=None) -> dict:
         after = turns[-1].shortlist
         changes = diff(before, after)
 
-        checks = [check(spec, before, after, changes) for spec in case["assertions"]]
+        dropped = turns[-1].dropped
+        checks = [check(spec, before, after, changes, dropped) for spec in case["assertions"]]
         tests.append(
             {
                 "test_id": case["test_id"],
@@ -126,6 +182,7 @@ def run(orchestrator=None) -> dict:
                 "before": [l["id"] for l in before],
                 "after": [l["id"] for l in after],
                 "diff": changes,
+                "dropped": dropped,
                 "response_text": turns[-1].response_text,
                 "assertions": checks,
             }

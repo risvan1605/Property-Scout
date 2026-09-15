@@ -33,7 +33,7 @@
       "edit_turn": "Add another option with a balcony, anywhere",
       "assertions": [
         {"type": "previous_listings_preserved"},
-        {"type": "has_new_additions", "min": 1},
+        {"type": "has_new_additions", "min": 1, "max": 1},
         {"type": "new_listings_have_amenity", "amenity": "balcony"}
       ]
     },
@@ -57,6 +57,70 @@
       "assertions": [
         {"type": "shortlist_identical"},
         {"type": "all_have_amenities", "amenities": ["balcony"]}
+      ]
+    },
+    {
+      "test_id": "edit_006",
+      "description": "Dropping one bedroom count keeps the others — no minimum can express it",
+      "setup_turns": ["I need a place in Koramangala under 40k, 1 or 2 bedrooms"],
+      "edit_turn": "Drop the 2BHK options",
+      "assertions": [
+        {"type": "none_with_bedrooms", "bedrooms": [2]},
+        {"type": "no_unintended_removals", "keep_if": {"not_bedrooms": [2]}},
+        {"type": "no_new_additions"},
+        {"type": "survivors_unchanged"},
+        {"type": "removals_have_reasons"}
+      ]
+    },
+    {
+      "test_id": "edit_007",
+      "description": "Narrowing on a field no search parameter covers (floor area)",
+      "setup_turns": ["Show me 2BHKs under 45000"],
+      "edit_turn": "Drop anything smaller than 1100 square feet",
+      "assertions": [
+        {"type": "all_min_sqft", "sqft": 1100},
+        {"type": "no_unintended_removals", "keep_if": {"min_sqft": 1100}},
+        {"type": "no_new_additions"},
+        {"type": "survivors_unchanged"},
+        {"type": "removals_have_reasons"}
+      ]
+    },
+    {
+      "test_id": "edit_008",
+      "description": "Dropping one listing by name removes exactly that listing",
+      "setup_turns": ["2BHK in Koramangala under 40k"],
+      "edit_turn": "Drop Prestige Oasis",
+      "assertions": [
+        {"type": "removed_exactly", "ids": ["listing_001"]},
+        {"type": "no_new_additions"},
+        {"type": "survivors_unchanged"},
+        {"type": "removals_have_reasons"}
+      ]
+    },
+    {
+      "test_id": "edit_009",
+      "description": "A later edit must not bring back a listing the user already dropped",
+      "setup_turns": ["Show me 2BHKs under 45000", "Drop Prestige Oasis"],
+      "edit_turn": "Now drop anything above 35k",
+      "assertions": [
+        {"type": "all_within_budget", "budget": 35000},
+        {"type": "not_listed", "ids": ["listing_001"]},
+        {"type": "no_unintended_removals", "keep_if": {"max_rent": 35000}},
+        {"type": "no_new_additions"},
+        {"type": "survivors_unchanged"}
+      ]
+    },
+    {
+      "test_id": "edit_010",
+      "description": "Narrowing on data that has to be fetched first (metro distance from OpenStreetMap)",
+      "setup_turns": ["Show me 2BHKs under 45000"],
+      "edit_turn": "Only show me places within 15 minutes of a metro station",
+      "assertions": [
+        {"type": "has_removals", "min": 1},
+        {"type": "kept_near_metro", "max_km": 1.5},
+        {"type": "no_new_additions"},
+        {"type": "survivors_unchanged"},
+        {"type": "removals_have_reasons"}
       ]
     }
   ]

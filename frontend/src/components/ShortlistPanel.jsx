@@ -6,7 +6,7 @@ import './ShortlistPanel.css'
 
 export default function ShortlistPanel() {
   const { state, dispatch } = useApp()
-  const { shortlist, selectedListingId, nearbyById, nearbyLoadingId, isProcessing } = state
+  const { shortlist, dropped, selectedListingId, nearbyById, nearbyLoadingId, isProcessing } = state
 
   // Opening a card is what asks OpenStreetMap what's around it.
   useEffect(() => {
@@ -81,6 +81,26 @@ export default function ShortlistPanel() {
             />
           ))}
         </div>
+      )}
+
+      {dropped.length > 0 && (
+        <details className="dropped">
+          <summary className="dropped__toggle">
+            <span className="eyebrow">Dropped</span>
+            <span className="dropped__count num">{dropped.length}</span>
+          </summary>
+          <ul className="dropped__list">
+            {dropped.map((item) => (
+              <li key={item.listing_id} className="dropped__item">
+                <span className="dropped__name">{item.society_name}</span>
+                <span className="dropped__meta num">
+                  {item.bedrooms} BHK · ₹{item.rent?.toLocaleString('en-IN')}
+                </span>
+                <span className="dropped__reason">{item.reason}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </section>
   )

@@ -1,7 +1,7 @@
 """
 Prompt Templates & Tool Schemas
 -------------------------------
-The system prompt, the per-turn state block, and the five function-calling
+The system prompt, the per-turn state block, and the six function-calling
 declarations the orchestrator hands to Gemini.
 """
 
@@ -36,7 +36,8 @@ per-square-foot rate or a property valuation — you have no such data, and a
 monthly rent must never be presented as a purchase price.
 
 ## Grounding rules — these are absolute
-- NEVER state a fact about a listing that did not come from `search_listings`.
+- NEVER state a fact about a listing that did not come from `search_listings` or
+  the CURRENT SHORTLIST block.
   Rent, bedrooms, sqft, furnishing and amenities come from the tool, never from memory.
 - NEVER state a fact about a neighborhood without first calling
   `retrieve_neighborhood_info`. If it returns no data, say "I don't have data on
@@ -66,23 +67,40 @@ spoken naturally ("thirty-two thousand rupees", not "INR 32000.00").
   what you've got.
 - A question like "do you have anything in Indiranagar?" is a preference, not
   small talk — record the neighborhood and ask for what's missing.
-- If the user changes their mind ("actually make it 3BHK"), just update and
-  re-search. Don't ask them to confirm.
+- If the user changes their mind ("actually make it 3BHK", "raise it to 50k"), just
+  update and re-search. Don't ask them to confirm.
 
 ## Searching and refining
-- Call `search_listings` with the FULL set of currently active filters every
-  time, not just the newly mentioned one. "Drop anything above 30k" on an
-  existing 2BHK Koramangala search means
-  search_listings(max_budget=30000, min_bedrooms=2, neighborhood="Koramangala").
-- The CURRENT SHORTLIST block below tells you what is on the user's screen right
-  now. Use it to answer "why this one?" and to apply refinements.
+The shortlist changes in exactly three ways. Pick by what the user wants:
+
+1. NARROW — "drop anything above 40k", "only pet-friendly", "drop the 2BHKs",
+   "only places near a metro", "drop Prestige Oasis", "nothing under 1100 sqft".
+   Call `update_shortlist` with every on-screen listing that fails, each with a
+   short reason taken from its data ("rent 45,000 is above 40,000"). This works
+   for ANY criterion — never re-run search_listings to narrow, because that
+   brings back listings the user already dropped.
+   - Decide from the CURRENT SHORTLIST block. Check every listing, and compare
+     numbers carefully: 40,000 is NOT above 40,000.
+   - If the criterion needs data the block doesn't have (what is near a listing),
+     get it first — call query_openstreetmap for each listing — then remove.
+   - Travel times become distances, and you say the assumption out loud: walking
+     is about 80 metres a minute, so "15 minutes' walk" is about 1.2 km. A listing
+     whose lookup failed is kept, and you say you couldn't check it.
+   - If every listing already meets the criterion, change nothing and say so.
+2. ADD — "add one more with a balcony", "also show me…", "what else is there".
+   Call search_listings with mode="append" and only the new criteria. "One more"
+   or "another option" means limit=1. Listings on screen and listings the user
+   dropped are never re-added.
+3. NEW SEARCH — the user changes or widens what they're looking for. Call
+   search_listings with the FULL set of active filters (default mode="replace").
+   Pass the IDs in the DROPPED block as exclude_ids unless the user wants them back.
+
 - Refinements change only what was asked. Do not silently drop or add anything else.
-- "Also show me…", "add one with…", "what else is there" mean ADD to the shortlist:
-  call search_listings with mode="append" and only the new criteria, so the
-  listings already on screen stay. Narrowing ("drop", "only show") uses the
-  default mode="replace" with the full active filter set.
-- If a refinement empties the shortlist, say so and name the range that got
-  filtered out, then offer a specific relaxation.
+- Describe the change from the tool result (`removed_ids`, `added_ids`,
+  `shortlist_effect`), never from what you meant to do. If nothing changed, don't
+  say the shortlist was updated.
+- If a refinement empties the shortlist, say so and name what got filtered out,
+  then offer a specific relaxation.
 - If a refinement arrives before any shortlist exists, say you need their
   preferences first.
 - If nothing matches, say so directly and suggest which single constraint to
@@ -93,6 +111,7 @@ spoken naturally ("thirty-two thousand rupees", not "INR 32000.00").
 - "Why this one?" is answered from the listing's own fields plus retrieved
   neighborhood data — budget fit, bedroom match, the amenities they asked for,
   and what the sources say about the area.
+- "Why did you drop that one?" is answered from its reason in the DROPPED block.
 - If asked about commuting and no commute point was given, ask where they commute to.
 - Answer repeated questions in full. Never say "as I already mentioned".
 - If a question has several parts and your sources only cover some, answer those
@@ -139,13 +158,27 @@ User: "I'm looking for a nice place"
 → Nothing actionable. Ask one question covering the two essentials: "Happy to
   help! What's your monthly budget, and how many bedrooms do you need?"
 
-User: "Drop anything above 30k" (shortlist exists, was 2BHK Koramangala under 35k)
-→ Call search_listings(max_budget=30000, min_bedrooms=2, neighborhood="Koramangala",
-  amenities=["parking"]) — the full active filter set, budget replaced.
+User: "Drop anything above 30k" (shortlist shows listing_001 at 28,000 and
+  listing_002 at 35,000)
+→ update_shortlist(remove=[{listing_id: "listing_002",
+  reason: "Rent 35,000 is above 30,000"}]). listing_001 stays untouched.
+  "Done — I've dropped Sobha Dream Acres, which was over thirty thousand."
+
+User: "Drop the 2BHKs" (shortlist shows two 1BHKs and two 2BHKs)
+→ update_shortlist removing the two 2BHK IDs, reason "2BHK — you asked to drop
+  2BHKs". No search; the 1BHKs stay exactly as they are.
+
+User: "Only show me places within 15 minutes of a metro station" (six on screen)
+→ Call query_openstreetmap(listing_id=..., poi_types=["metro_station"]) for all
+  six in one go. Then update_shortlist removing those with no station within
+  about 1.2 km, reason "Nearest metro 1.4 km away — over a 15-minute walk".
+  Keep any whose lookup failed, and say so: "I've kept two near a metro and
+  dropped three. I took fifteen minutes as about 1.2 km on foot, and couldn't
+  check Purva Venezia, so it's still there."
 
 User: "Add another option with a balcony" (shortlist already showing two flats)
-→ search_listings(amenities=["balcony"], mode="append"). The two existing flats
-  stay on screen; the balcony option joins them.
+→ search_listings(amenities=["balcony"], mode="append", limit=1). The two
+  existing flats stay on screen; one balcony option joins them.
 
 User: "Drop anything above 40k" (no shortlist yet)
 → No search. "I don't have a shortlist yet — tell me your budget and how many
@@ -220,11 +253,24 @@ def _date_anchor() -> list[str]:
     ]
 
 
+def _nearest_metro(listing: dict) -> str | None:
+    """The closest metro already looked up for a card, if its lookup worked."""
+    pois = listing.get("nearby_pois") or {}
+    if pois.get("error") or "metro_stations" not in pois:
+        return None
+    stations = [p for p in pois["metro_stations"] if p.get("distance_km") is not None]
+    if not stations:
+        return f"no metro within {(pois.get('radius_meters') or 0) / 1000:g} km"
+    nearest = min(stations, key=lambda p: p["distance_km"])
+    return f"nearest metro {nearest.get('name')} {nearest['distance_km']} km"
+
+
 def build_state_block(
     preferences: dict,
     shortlist: list[dict],
     clarification_count: int,
     booking: dict | None = None,
+    dropped: list[dict] | None = None,
 ) -> str:
     """Render the live session state that gets appended to the system prompt."""
     lines = ["## CURRENT SESSION STATE"]
@@ -248,13 +294,22 @@ def build_state_block(
         lines.append(f"CURRENT SHORTLIST ({len(shortlist)} listings on the user's screen):")
         for item in shortlist:
             amenities = ", ".join(item.get("amenities") or []) or "none listed"
+            metro = _nearest_metro(item)
             lines.append(
                 f"  - {item['id']}: {item.get('society_name')}, {item.get('neighborhood')}, "
                 f"₹{item.get('rent'):,}/mo, {item.get('bedrooms')}BHK, "
                 f"{item.get('sqft')} sqft, {item.get('furnishing')}, amenities: {amenities}"
+                + (f", {metro} (OpenStreetMap)" if metro else "")
             )
     else:
         lines.append("CURRENT SHORTLIST: empty — nothing is on the user's screen yet.")
+
+    if dropped:
+        lines.append("DROPPED (the user narrowed these away — don't bring them back unasked):")
+        for item in dropped:
+            lines.append(
+                f"  - {item['listing_id']}: {item.get('society_name')} — {item.get('reason')}"
+            )
 
     if booking:
         lines.append(
@@ -317,12 +372,53 @@ SEARCH_LISTINGS_DECL = types.FunctionDeclaration(
                 type=types.Type.STRING,
                 description=(
                     "'replace' (default) swaps the shortlist for these results — use it "
-                    "for a new search or a narrowing refinement. 'append' keeps what is "
-                    "already on screen and adds these to it — use it ONLY when the user "
-                    "asks to ADD or ALSO SEE options, e.g. 'add one with a balcony'."
+                    "only for a new or changed search, never to narrow (that is "
+                    "update_shortlist). 'append' keeps what is already on screen and "
+                    "adds these to it — use it when the user asks to ADD or ALSO SEE "
+                    "options, e.g. 'add one with a balcony'."
+                ),
+            ),
+            "limit": types.Schema(
+                type=types.Type.INTEGER,
+                description="Return at most this many. 'Add one more option' means 1.",
+            ),
+        },
+    ),
+)
+
+UPDATE_SHORTLIST_DECL = types.FunctionDeclaration(
+    name="update_shortlist",
+    description=(
+        "Remove listings from the shortlist on the user's screen. Use it for EVERY "
+        "narrowing edit, on any criterion — price, size, bedrooms, furnishing, "
+        "amenities, metro distance, or a listing named outright. Only IDs currently "
+        "on screen are accepted, and nothing else on screen changes."
+    ),
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "remove": types.Schema(
+                type=types.Type.ARRAY,
+                description="Every on-screen listing that fails the user's criterion.",
+                items=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "listing_id": types.Schema(
+                            type=types.Type.STRING, description="e.g. 'listing_002'."
+                        ),
+                        "reason": types.Schema(
+                            type=types.Type.STRING,
+                            description=(
+                                "Why it was dropped, from its own data, e.g. "
+                                "'Rent 45,000 is above 40,000'. Shown to the user."
+                            ),
+                        ),
+                    },
+                    required=["listing_id", "reason"],
                 ),
             ),
         },
+        required=["remove"],
     ),
 )
 
@@ -434,6 +530,7 @@ GENERATE_PDF_DECL = types.FunctionDeclaration(
 
 TOOL_DECLARATIONS = [
     SEARCH_LISTINGS_DECL,
+    UPDATE_SHORTLIST_DECL,
     QUERY_OSM_DECL,
     RETRIEVE_NEIGHBORHOOD_DECL,
     BOOK_VISIT_DECL,

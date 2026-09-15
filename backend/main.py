@@ -28,6 +28,7 @@ from config import (
     SQLITE_DB_PATH,
 )
 from core.conversation import session_store
+from tools.email_sender import _active_provider as email_provider
 from tools.email_sender import configuration_status as email_status
 from tools.google_calendar import configuration_status as booking_status
 from tools.tts import key_shape_warning as voice_key_warning
@@ -102,14 +103,17 @@ async def lifespan(app: FastAPI):
     email_ok, email_detail = email_status()
     # The port matters enough to print: a blocked one and an unapplied variable
     # produce the identical 30s timeout, and only this line tells them apart.
-    transport = "implicit TLS" if SMTP_PORT == 465 else "STARTTLS"
-    if email_ok:
-        logger.info("Email ready via %s:%s (%s)", SMTP_HOST, SMTP_PORT, transport)
-    else:
-        logger.error(
-            "Email NOT available: %s (configured for %s:%s)",
-            email_detail, SMTP_HOST, SMTP_PORT,
+    provider = email_provider()
+    if provider == "smtp":
+        transport = f"{SMTP_HOST}:{SMTP_PORT} " + (
+            "(implicit TLS)" if SMTP_PORT == 465 else "(STARTTLS)"
         )
+    else:
+        transport = f"{provider} over HTTPS"
+    if email_ok:
+        logger.info("Email ready via %s", transport)
+    else:
+        logger.error("Email NOT available: %s (configured for %s)", email_detail, transport)
 
     voice_ok, voice_detail = voice_status()
     shape = voice_key_warning()

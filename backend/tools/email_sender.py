@@ -7,12 +7,24 @@ If the PDF could not be rendered, the same document is sent as the HTML body
 instead — the user still gets their shortlist.
 """
 
+import base64
 import logging
 import smtplib
 import ssl
+
+import httpx
 from email.message import EmailMessage
 
-from config import SMTP_HOST, SMTP_PASS, SMTP_PORT, SMTP_USER
+from config import (
+    BREVO_API_KEY,
+    EMAIL_FROM,
+    EMAIL_FROM_NAME,
+    RESEND_API_KEY,
+    SMTP_HOST,
+    SMTP_PASS,
+    SMTP_PORT,
+    SMTP_USER,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +79,100 @@ def _plain_text_summary(listings: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _active_provider() -> str:
+    """Which transport to use. An HTTP provider wins when one is configured."""
+    if BREVO_API_KEY:
+        return "brevo"
+    if RESEND_API_KEY:
+        return "resend"
+    return "smtp"
+
+
+def _decompose(message) -> dict:
+    """Pull an EmailMessage apart into the pieces an HTTP API wants.
+
+    The messages are built once, as MIME, and both transports read from that —
+    so the PDF and the .ics travel over HTTP exactly as they do over SMTP, and
+    there is only one place where an email's content is decided.
+    """
+    text, html, attachments = "", "", []
+    for part in message.walk():
+        if part.get_content_maintype() == "multipart":
+            continue
+        disposition = part.get_content_disposition()
+        content_type = part.get_content_type()
+        if disposition == "attachment":
+            payload = part.get_payload(decode=True) or b""
+            attachments.append(
+                {
+                    "name": part.get_filename() or "attachment",
+                    "content": base64.b64encode(payload).decode(),
+                    "type": content_type,
+                }
+            )
+        elif content_type == "text/plain" and not text:
+            text = part.get_content()
+        elif content_type == "text/html" and not html:
+            html = part.get_content()
+    return {
+        "subject": message["Subject"],
+        "to": message["To"],
+        "text": text,
+        "html": html,
+        "attachments": attachments,
+    }
+
+
+def _deliver_http(message, provider: str) -> None:
+    """Send over the provider's HTTPS API.
+
+    Port 443 is never blocked, which is the whole point of this path existing.
+    """
+    parts = _decompose(message)
+    if provider == "brevo":
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {"api-key": BREVO_API_KEY, "content-type": "application/json"}
+        payload = {
+            "sender": {"email": EMAIL_FROM, "name": EMAIL_FROM_NAME},
+            "to": [{"email": parts["to"]}],
+            "subject": parts["subject"],
+            "textContent": parts["text"] or " ",
+        }
+        if parts["html"]:
+            payload["htmlContent"] = parts["html"]
+        if parts["attachments"]:
+            payload["attachment"] = [
+                {"name": a["name"], "content": a["content"]} for a in parts["attachments"]
+            ]
+    else:
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "from": f"{EMAIL_FROM_NAME} <{EMAIL_FROM}>",
+            "to": [parts["to"]],
+            "subject": parts["subject"],
+            "text": parts["text"] or " ",
+        }
+        if parts["html"]:
+            payload["html"] = parts["html"]
+        if parts["attachments"]:
+            payload["attachments"] = [
+                {"filename": a["name"], "content": a["content"]} for a in parts["attachments"]
+            ]
+
+    response = httpx.post(url, json=payload, headers=headers, timeout=30.0)
+    if response.status_code in (401, 403):
+        logger.error("%s rejected the API key", provider)
+        raise smtplib.SMTPAuthenticationError(response.status_code, b"provider rejected the key")
+    if response.status_code >= 400:
+        raise EmailError(
+            f"{provider} refused the message ({response.status_code}): {response.text[:160]}"
+        )
+
+
 def _deliver(message) -> None:
     """Hand one message to the SMTP server.
 
@@ -79,6 +185,11 @@ def _deliver(message) -> None:
     OSError/SMTPException for anything else, so callers can tell a wrong
     password from a blocked port.
     """
+    provider = _active_provider()
+    if provider != "smtp":
+        _deliver_http(message, provider)
+        return
+
     if SMTP_PORT == 465:
         with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30, context=_ssl_context()) as smtp:
             smtp.login(SMTP_USER, SMTP_PASS)
@@ -98,6 +209,12 @@ def configuration_status() -> tuple[bool, str]:
     A valid-looking credential that Gmail then rejects still fails at send time,
     and that is logged where it happens.
     """
+    provider = _active_provider()
+    if provider != "smtp":
+        if not EMAIL_FROM:
+            return False, f"{provider} is configured but EMAIL_FROM (or SMTP_USER) is not set"
+        return True, f"ok (via {provider})"
+
     if not SMTP_USER:
         return False, "SMTP_USER is not set"
     if not SMTP_PASS:

@@ -48,6 +48,18 @@ SMTP_USER = _setting("SMTP_USER")
 # Google displays App Passwords as "abcd efgh ijkl mnop"; SMTP wants the 16
 # characters with no spaces.
 SMTP_PASS = _setting("SMTP_PASS").replace(" ", "")
+# Hosting platforms routinely block outbound SMTP to deter spam, which shows up
+# as a connection timeout on every port. Delivery over HTTPS is unaffected, so
+# either of these keys switches the sender to that provider's API and SMTP
+# becomes the local-development fallback. Brevo sends to any recipient once the
+# sender address is verified; Resend needs a verified domain for anything but
+# your own address.
+BREVO_API_KEY = _setting("BREVO_API_KEY")
+RESEND_API_KEY = _setting("RESEND_API_KEY")
+# Who the mail comes from when sending over HTTP. Falls back to SMTP_USER, which
+# is already the From address on the SMTP path.
+EMAIL_FROM = _setting("EMAIL_FROM") or SMTP_USER
+EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "Property Scout")
 
 # ─── Text-to-Speech (ElevenLabs) ─────────────────────────────────────────────
 # The browser's speechSynthesis voice sounds synthetic; ElevenLabs carries the

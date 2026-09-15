@@ -20,7 +20,13 @@ from api.routes import chat as chat_routes
 from api.routes import listings as listings_routes
 from api.routes import shortlist_pdf as shortlist_pdf_routes
 from api.routes import tts as tts_routes
-from config import CHROMA_DB_PATH, GOOGLE_SERVICE_ACCOUNT_JSON, SQLITE_DB_PATH
+from config import (
+    CHROMA_DB_PATH,
+    GOOGLE_SERVICE_ACCOUNT_JSON,
+    SMTP_HOST,
+    SMTP_PORT,
+    SQLITE_DB_PATH,
+)
 from core.conversation import session_store
 from tools.email_sender import configuration_status as email_status
 from tools.google_calendar import configuration_status as booking_status
@@ -94,10 +100,16 @@ async def lifespan(app: FastAPI):
         logger.error("Booking NOT available: %s", booking_detail)
 
     email_ok, email_detail = email_status()
+    # The port matters enough to print: a blocked one and an unapplied variable
+    # produce the identical 30s timeout, and only this line tells them apart.
+    transport = "implicit TLS" if SMTP_PORT == 465 else "STARTTLS"
     if email_ok:
-        logger.info("Email ready")
+        logger.info("Email ready via %s:%s (%s)", SMTP_HOST, SMTP_PORT, transport)
     else:
-        logger.error("Email NOT available: %s", email_detail)
+        logger.error(
+            "Email NOT available: %s (configured for %s:%s)",
+            email_detail, SMTP_HOST, SMTP_PORT,
+        )
 
     voice_ok, voice_detail = voice_status()
     shape = voice_key_warning()

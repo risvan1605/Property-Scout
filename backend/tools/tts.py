@@ -79,6 +79,23 @@ def _cache_put(key: str, audio: bytes) -> None:
         _cache.popitem(last=False)
 
 
+def _upstream_reason(response) -> str:
+    """The slug ElevenLabs uses for a refusal, e.g. "voice_not_found".
+
+    Names a voice id or a model id at worst — never credentials — so it is safe
+    to carry back to the caller, where it saves a trip through the host's logs.
+    """
+    try:
+        detail = response.json().get("detail")
+    except ValueError:
+        return ""
+    if isinstance(detail, dict):
+        return str(detail.get("status") or detail.get("message") or "")[:120]
+    if isinstance(detail, str):
+        return detail[:120]
+    return ""
+
+
 async def synthesize(text: str, voice_id: str | None = None) -> tuple[bytes, bool]:
     """
     Render `text` as MP3 audio.
@@ -142,8 +159,18 @@ async def synthesize(text: str, voice_id: str | None = None) -> tuple[bytes, boo
         logger.warning("ElevenLabs quota exhausted")
         raise TTSUnavailable("Speech quota exhausted for now")
     if response.status_code >= 400:
-        logger.warning("ElevenLabs error %s: %s", response.status_code, response.text[:200])
-        raise TTSUnavailable(f"Speech service error ({response.status_code})")
+        # ElevenLabs puts a machine-readable slug in detail.status and a
+        # sentence in detail.message. A bare status code says only that the
+        # request was refused, not which part of it was wrong — and the part
+        # that is wrong here is the voice or the model, which is a
+        # configuration mistake someone has to act on.
+        reason = _upstream_reason(response)
+        logger.error(
+            "ElevenLabs refused the request: %s %s (voice=%s, model=%s)",
+            response.status_code, reason or response.text[:200], voice, ELEVENLABS_MODEL,
+        )
+        detail = f"Speech service error ({response.status_code}"
+        raise TTSUnavailable(f"{detail}: {reason})" if reason else f"{detail})")
 
     audio = response.content
     if not audio:

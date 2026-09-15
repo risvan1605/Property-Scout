@@ -61,6 +61,27 @@ def runtime_status() -> tuple[bool, str]:
     return True, "ok"
 
 
+def key_shape_warning() -> str:
+    """A note when the key does not look like one, or is empty.
+
+    Current ElevenLabs keys are `sk_` followed by ~48 characters. Older ones are
+    bare hex, so this only ever warns — a truncated paste or a value from the
+    wrong field is far more common than a legacy key, and both produce the same
+    401 that reads as "the key was revoked".
+    """
+    key = ELEVENLABS_API_KEY
+    if not key:
+        return ""
+    if key.startswith("sk_"):
+        return "" if len(key) >= 40 else f"key starts with sk_ but is only {len(key)} characters — truncated?"
+    if len(key) == 32 and all(c in "0123456789abcdef" for c in key.lower()):
+        return ""
+    return (
+        f"key is {len(key)} characters and does not start with 'sk_' — check that "
+        "ELEVENLABS_API_KEY holds the API key and not another value"
+    )
+
+
 def _cache_key(text: str, voice_id: str) -> str:
     return hashlib.sha256(f"{voice_id}:{ELEVENLABS_MODEL}:{text}".encode()).hexdigest()
 

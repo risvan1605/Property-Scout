@@ -24,6 +24,7 @@ from config import CHROMA_DB_PATH, GOOGLE_SERVICE_ACCOUNT_JSON, SQLITE_DB_PATH
 from core.conversation import session_store
 from tools.email_sender import configuration_status as email_status
 from tools.google_calendar import configuration_status as booking_status
+from tools.tts import key_shape_warning as voice_key_warning
 from tools.tts import runtime_status as voice_status
 
 logging.basicConfig(level=logging.INFO)
@@ -97,6 +98,12 @@ async def lifespan(app: FastAPI):
         logger.info("Email ready")
     else:
         logger.error("Email NOT available: %s", email_detail)
+
+    voice_ok, voice_detail = voice_status()
+    shape = voice_key_warning()
+    if shape:
+        logger.warning("ElevenLabs %s", shape)
+    logger.info("Voice ready") if voice_ok else logger.error("Voice NOT available: %s", voice_detail)
 
     app.state.listing_count = listing_count
     app.state.chroma_client = _init_chroma()
